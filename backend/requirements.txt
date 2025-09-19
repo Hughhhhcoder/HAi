@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+redis
+pydantic
+python-jose
+passlib[bcrypt]
+python-dotenv 
+python-multipart
+PyMuPDF
+requests

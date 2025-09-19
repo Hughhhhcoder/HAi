@@ -1,0 +1,23 @@
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Env
+.env
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+.cursor/
+
+# Docker volumes (local only)
+# uploads are persisted via docker volume, exclude local host copies
+backend/uploads/
