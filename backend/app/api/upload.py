@@ -1,5 +1,7 @@
 import os
 from fastapi import APIRouter, UploadFile, File, HTTPException
+import base64
+import mimetypes
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from uuid import uuid4
@@ -28,7 +30,16 @@ def upload_image(file: UploadFile = File(...)):
         f.write(file.file.read())
     # 构造图片URL
     url = f"/static/images/{filename}"
-    return JSONResponse({"url": url})
+    # 生成 data:URL（便于外部多模态API直接访问）
+    try:
+        mime, _ = mimetypes.guess_type(file_path)
+        mime = mime or "image/jpeg"
+        with open(file_path, "rb") as rf:
+            b64 = base64.b64encode(rf.read()).decode("utf-8")
+        data_url = f"data:{mime};base64,{b64}"
+    except Exception:
+        data_url = None
+    return JSONResponse({"url": url, "data_url": data_url})
 
 @router.post("/audio")
 def upload_audio(file: UploadFile = File(...)):

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Form
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.user_profile import UserProfile
@@ -19,7 +19,13 @@ def get_db():
 
 # 录入/更新作息信息
 @router.post("/profile")
-def update_profile(user_id: int, sleep_time: str = None, wake_time: str = None, preferences: str = None, db: Session = Depends(get_db)):
+def update_profile(
+    user_id: int = Form(...),
+    sleep_time: str | None = Form(None),
+    wake_time: str | None = Form(None),
+    preferences: str | None = Form(None),
+    db: Session = Depends(get_db)
+):
     profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
     if not profile:
         profile = UserProfile(user_id=user_id)
@@ -48,7 +54,7 @@ def get_profile(user_id: int, db: Session = Depends(get_db)):
 
 # 生成生活恢复计划（mock智能）
 @router.post("/generate")
-def generate_plan(user_id: int, db: Session = Depends(get_db)):
+def generate_plan(user_id: int = Form(...), db: Session = Depends(get_db)):
     # 获取作息
     profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
     if not profile:

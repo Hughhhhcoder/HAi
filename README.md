@@ -1,6 +1,15 @@
-# Hai 心理助手应用（FastAPI + Vue 3）
+# Hai 心理健康支持平台（FastAPI + Vue 3）
 
-本项目提供一个围绕心理健康的全栈示例：用户登录、AI 对话、心理测评、每日打卡、积分与文献检索。已完整容器化，支持一键启动。
+专业的心理健康 AI 支持平台，提供 **10 个专业心理咨询 AI 角色**，具备**长期记忆系统**，会越来越了解用户。包含用户登录、AI 个性化对话、心理测评、每日打卡、积分与文献检索。已完整容器化，支持一键启动。
+
+## 核心特性
+- 🧠 **10 个专业心理 AI 角色**：基于真实心理学流派（人本主义、CBT、正念、积极心理学、EFT、创伤疗愈等）
+- 💭 **长期记忆系统**：AI 自动记住用户的性格、困扰、目标等，对话越多越了解用户
+- 🎯 **个性化对话**：每次回复基于用户独特画像（作息、测评、打卡、记忆）
+- 🖼️ **多模态支持**：支持图片上传（最大 50MB）和识别
+- 📊 **心理测评**：PHQ9、GAD7 专业量表
+- 📝 **每日打卡**：记录心情和睡眠，积分激励
+- 📚 **文献检索**：PDF/TXT 上传与语义检索
 
 ## 技术栈
 - 后端：FastAPI、SQLAlchemy、MySQL、Redis
@@ -15,35 +24,50 @@ uploads/           # 运行时上传目录（容器卷挂载）
 docker-compose.yml # 编排 MySQL/Redis/Backend/Frontend/Seed
 ```
 
+## 10 个专业心理 AI 角色
+
+| 角色 | 专长 | 适合问题 |
+|------|------|---------|
+| 温暖倾听者·艾米 | 人本主义疗法 | 需要倾诉、被理解 |
+| 认知教练·理查德 | 认知行为疗法 (CBT) | 负面思维、焦虑抑郁 |
+| 正念导师·静心 | 正念减压 (MBSR) | 压力管理、情绪调节 |
+| 积极心理师·阳光 | 积极心理学 | 寻找优势、提升幸福感 |
+| 情绪专家·心涟 | 情绪聚焦疗法 (EFT) | 情绪困扰、情绪调节 |
+| 创伤疗愈师·守护 | 创伤知情护理 | 创伤后应激、安全感 |
+| 青少年导师·星辰 | 青少年心理学 | 青春期困扰、学业压力 |
+| 职场心理顾问·行远 | 组织心理学 | 职业倦怠、职场压力 |
+| 关系咨询师·和鸣 | Gottman 方法 | 亲密关系、沟通问题 |
+| 生命意义探索者·启明 | 存在主义疗法 | 意义危机、存在性焦虑 |
+
 ## 快速开始（Docker）
 1) 准备环境变量（可选，默认值见 compose）
 - 如需自定义，请创建 `.env` 并填入：
-```
+```env
+# 数据库
 MYSQL_USER=hai
 MYSQL_PASSWORD=hai123
-MYSQL_HOST=mysql
-MYSQL_PORT=3306
 MYSQL_DB=aidb
-REDIS_HOST=redis
-REDIS_PORT=6379
-REDIS_DB=0
-VVEAI_API_URL=https://api.vveai.com/panel/token
-VVEAI_API_KEY=change-me
+
+# AI 配置
+AI_USE_EXTERNAL=true
+AI_API_URL=https://api.gpt.ge/v1/chat/completions
+AI_API_KEY=your-api-key
+AI_MODEL=gpt-4o-all
+AI_IMAGE_INPUT_MODE=data_url
 ```
 
 2) 一键启动
-```
+```bash
 docker compose up -d --build
 ```
-- 前端：`http://localhost:5173`
-- 后端：`http://localhost:8000`（也可通过前端 Nginx 代理 `http://localhost:5173/api` 访问）
-- MySQL：本地 3306 暴露
-- Redis：本地 6379 暴露
+- 前端：`http://localhost:5174`
+- 后端：`http://localhost:8000`
+- 接口文档：`http://localhost:8000/docs`
 
 3) 初始化数据
 - 编排中包含 `seed` 服务，会在后端启动后执行 `app.core.init_db`：
-  - 确保所有模型表已创建
-  - 插入默认 AI 角色
+  - 创建所有数据库表（包括用户记忆和洞察表）
+  - 插入 10 个专业心理 AI 角色
   - 创建测试账号：`admin / admin123`
 
 ## 开发说明
@@ -72,16 +96,33 @@ docker compose down
 ## 测试与自检
 - 健康检查：`GET /ping` → `{ "msg": "pong" }`
 - 登录：`POST /user/login`（使用 admin/admin123）
-- AI 角色：`GET /ai/roles`
+- AI 角色：`GET /ai/roles` → 返回 10 个专业角色
 - 心理问卷：`GET /psych/questionnaire?test_type=PHQ9`
 - 打卡：`POST /checkin/daily`
 
 前端提供 `ApiTest` 页面便于快速验证。
 
+## 长期记忆系统说明
+AI 会自动从对话中提取并记住：
+- **性格特质**："我是一个完美主义者"
+- **困扰**："最近工作压力很大，经常失眠"
+- **目标**："希望能够学会放松"
+- **触发因素**："每当看到工作邮件就会焦虑"
+
+每次对话时，AI 都会看到完整的用户画像，包括：
+- 作息信息
+- 心理测评结果
+- 近期打卡心情
+- 重要记忆
+
+这让 AI 的回复更加个性化和贴近用户情况。
+
 ## 生产注意事项
 - 将数据库账号、密钥配置到外部安全存储，不使用默认值
 - 配置持久化存储（当前已挂载 MySQL 与上传卷）
+- **用户数据加密**：长期记忆包含敏感信息，需加密存储
 - 增加认证授权（JWT/Cookie），限制敏感接口
+- **添加免责声明**：AI 仅供心理健康支持，不能替代专业心理治疗
 - 配置 HTTPS 与反向代理（生产 Nginx/Traefik）
 
 ## 变更日志

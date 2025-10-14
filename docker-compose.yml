@@ -42,6 +42,19 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
+      # AI provider (OpenAI-style)
+      AI_USE_EXTERNAL: ${AI_USE_EXTERNAL:-false}
+      AI_API_URL: ${AI_API_URL:-https://api.gpt.ge/v1/chat/completions}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      AI_TEMPERATURE: ${AI_TEMPERATURE:-0.7}
+      AI_TOP_P: ${AI_TOP_P:-1}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-512}
+      # Vision image input strategy
+      AI_IMAGE_INPUT_MODE: ${AI_IMAGE_INPUT_MODE:-data_url}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      # OpenAI-compatible API timeout
+      AI_REQUEST_TIMEOUT: ${AI_REQUEST_TIMEOUT:-60}
     depends_on:
       mysql:
         condition: service_healthy
@@ -80,7 +93,10 @@ services:
     depends_on:
       - backend
     ports:
-      - "5173:80"
+      - "5174:80"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - backend_uploads:/usr/share/nginx/uploads:ro
 
 volumes:
   mysql_data:

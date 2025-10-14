@@ -29,4 +29,16 @@ const router = createRouter({
   routes,
 })
 
+// 简单登录守卫：未登录跳转到 /login
+const publicPaths = ['/login', '/register']
+router.beforeEach((to, from, next) => {
+  const isPublic = publicPaths.includes(to.path)
+  const loggedIn = localStorage.getItem('isLoggedIn') === 'true'
+  if (!isPublic && !loggedIn) {
+    next('/login')
+  } else {
+    next()
+  }
+})
+
 export default router 

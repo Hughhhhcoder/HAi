@@ -114,7 +114,11 @@
                 ? 'bg-purple-600 text-white' 
                 : 'bg-gray-100 text-gray-800'"
             >
-              <p class="text-sm">{{ message.message }}</p>
+              <div v-if="message.image_url" class="mb-2">
+                <img :src="message.image_url" alt="image" class="rounded-lg max-h-48 object-contain" />
+              </div>
+              <div v-if="message.is_user" class="text-sm whitespace-pre-wrap">{{ message.message }}</div>
+              <div v-else class="prose prose-sm max-w-none" v-html="renderMarkdown(message.message)"></div>
               <p class="text-xs mt-1 opacity-70">
                 {{ formatTime(message.timestamp) }}
               </p>
@@ -122,7 +126,7 @@
           </div>
 
           <!-- 正在输入提示 -->
-          <div v-if="isTyping" class="flex justify-start">
+          <div v-if="showTyping" class="flex justify-start">
             <div class="bg-gray-100 text-gray-800 px-4 py-2 rounded-lg max-w-xs">
               <div class="flex items-center space-x-1">
                 <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
@@ -135,21 +139,31 @@
 
         <!-- 输入区域 -->
         <div class="border-t bg-gray-50 p-4">
-          <form @submit.prevent="sendMessage" class="flex space-x-2">
+          <form @submit.prevent="sendMessage" class="flex flex-col gap-2 md:flex-row md:items-center md:space-x-2">
             <input 
               v-model="newMessage"
               type="text" 
               placeholder="输入您的消息..."
               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              :disabled="isTyping"
+              :disabled="isTyping || isSending"
             />
-            <button 
-              type="submit"
-              :disabled="!newMessage.trim() || isTyping"
-              class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              发送
-            </button>
+            <input type="file" accept="image/*" @change="onPickImage" class="hidden" ref="imagePicker" />
+            <button type="button" @click="imagePicker.click()" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">图片</button>
+            <div v-if="pendingImageUrl" class="flex items-center gap-2 text-sm text-gray-600">
+              <img :src="pendingImageUrl" class="h-8 w-8 object-cover rounded" alt="preview" />
+              <button type="button" @click="clearPendingImage" class="text-gray-500 hover:text-gray-700">移除</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <button 
+                type="submit"
+                :disabled="!newMessage.trim() || isTyping || isSending"
+                class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {{ isSending || isTyping ? '发送中...' : '发送' }}
+              </button>
+            </div>
+            <!-- 速度调节 -->
+            
           </form>
         </div>
       </div>
@@ -159,6 +173,8 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { aiApi } from '../api/index.js'
 
 const userId = localStorage.getItem('user_id')
@@ -169,8 +185,14 @@ const selectedRole = ref(null)
 const chatHistory = ref([])
 const newMessage = ref('')
 const isLoadingRoles = ref(false)
-const isTyping = ref(false)
+const isTyping = ref(false) // 不再使用打字机
+const isSending = ref(false)
+const showTyping = ref(false)
+let typingTimer = null
 const chatContainer = ref(null)
+const imagePicker = ref(null)
+const pendingImageUrl = ref('')
+const pendingImageDataUrl = ref('')
 
 // 加载AI角色列表
 const loadAiRoles = async () => {
@@ -215,27 +237,45 @@ const sendMessage = async () => {
   if (!newMessage.value.trim() || !selectedRole.value || isTyping.value) return
 
   const message = newMessage.value.trim()
+  const imageUrl = pendingImageUrl.value
+  const imageDataUrl = pendingImageDataUrl.value
+  
   newMessage.value = ''
+  pendingImageUrl.value = ''
+  pendingImageDataUrl.value = ''
 
   // 添加用户消息到聊天历史
   chatHistory.value.push({
     message: message,
     is_user: true,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    image_url: imageUrl || null
   })
 
   await scrollToBottom()
-  isTyping.value = true
+  showTyping.value = true
+  isSending.value = true
 
   try {
-    const data = await aiApi.chat(userId, selectedRole.value.id, message)
-    // 添加AI回复到聊天历史
+    // 直接渲染完整回复
+    const data = await callWithRetry(() => aiApi.chat(
+      userId,
+      selectedRole.value.id,
+      message,
+      imageUrl || null,
+      null,
+      {
+        // 通过 extraFields 传递 image_data_url，避免重写 body
+        extraFields: { image_data_url: imageDataUrl || '' },
+      }
+    ), 2)
+    const reply = (data && (data.reply || data.ai_response)) || ''
+    showTyping.value = false
     chatHistory.value.push({
-      message: data.ai_response,
+      message: String(reply),
       is_user: false,
       timestamp: new Date().toISOString()
     })
-    await scrollToBottom()
   } catch (error) {
     console.error('发送消息失败:', error)
     chatHistory.value.push({
@@ -245,14 +285,23 @@ const sendMessage = async () => {
     })
   } finally {
     isTyping.value = false
+    isSending.value = false
     await scrollToBottom()
   }
 }
 
 // 清空聊天记录
-const clearChat = () => {
-  if (confirm('确定要清空聊天记录吗？此操作不可撤销。')) {
+const clearChat = async () => {
+  if (!selectedRole.value) return
+  if (!confirm('确定要清空聊天记录吗？此操作不可撤销。')) return
+  try {
+    stopTyping()
+    isTyping.value = false
+    showTyping.value = false
+    await aiApi.clearHistory(userId, selectedRole.value.id)
     chatHistory.value = []
+  } catch (e) {
+    console.error('清空失败', e)
   }
 }
 
@@ -262,6 +311,64 @@ const scrollToBottom = async () => {
   if (chatContainer.value) {
     chatContainer.value.scrollTop = chatContainer.value.scrollHeight
   }
+}
+
+function stopTyping() {
+  if (typingTimer) {
+    clearInterval(typingTimer)
+    typingTimer = null
+  }
+}
+
+// 选择图片并上传，得到 URL
+async function onPickImage(e) {
+  const file = e.target.files && e.target.files[0]
+  if (!file) return
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const resp = await fetch('/api/upload/image', { method: 'POST', body: formData })
+    const data = await resp.json()
+    pendingImageUrl.value = data.url || ''
+    pendingImageDataUrl.value = data.data_url || ''
+  } catch (err) {
+    console.error('图片上传失败', err)
+    pendingImageUrl.value = ''
+  } finally {
+    if (imagePicker.value) imagePicker.value.value = ''
+  }
+}
+
+function clearPendingImage() {
+  pendingImageUrl.value = ''
+  pendingImageDataUrl.value = ''
+}
+
+// 渲染 Markdown 并进行 XSS 清理
+function renderMarkdown(text) {
+  try {
+    const html = marked.parse(String(text || ''))
+    return DOMPurify.sanitize(html)
+  } catch (e) {
+    return DOMPurify.sanitize(String(text || ''))
+  }
+}
+
+// 带指数退避的重试
+async function callWithRetry(fn, retries = 2) {
+  let attempt = 0
+  let lastErr
+  while (attempt <= retries) {
+    try {
+      return await fn()
+    } catch (e) {
+      lastErr = e
+      const delay = Math.min(1500 * Math.pow(2, attempt), 4000)
+      await new Promise(r => setTimeout(r, delay))
+      attempt++
+    }
+  }
+  throw lastErr || new Error('请求失败')
 }
 
 // 获取角色描述

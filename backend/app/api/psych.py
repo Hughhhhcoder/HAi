@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.psych_test import PsychTest
@@ -57,8 +58,16 @@ def get_questionnaire(test_type: str):
     return QUESTIONNAIRES[test_type]
 
 # 提交测评
+class PsychSubmit(BaseModel):
+    user_id: int
+    test_type: str
+    answers: list[int]
+
 @router.post("/submit")
-def submit_psych_test(user_id: int, test_type: str, answers: list[int], db: Session = Depends(get_db)):
+def submit_psych_test(payload: PsychSubmit, db: Session = Depends(get_db)):
+    user_id = payload.user_id
+    test_type = payload.test_type
+    answers = payload.answers
     if test_type not in QUESTIONNAIRES:
         raise HTTPException(status_code=400, detail="不支持的问卷类型")
     questions = QUESTIONNAIRES[test_type]["questions"]

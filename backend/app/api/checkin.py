@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Form
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.daily_checkin import DailyCheckin
@@ -16,7 +16,13 @@ def get_db():
 
 # 每日打卡
 @router.post("/daily")
-def daily_checkin(user_id: int, mood: str = None, sleep_hours: float = None, completed_tasks: str = None, db: Session = Depends(get_db)):
+def daily_checkin(
+    user_id: int = Form(...),
+    mood: str | None = Form(None),
+    sleep_hours: float | None = Form(None),
+    completed_tasks: str | None = Form(None),
+    db: Session = Depends(get_db)
+):
     today = date.today()
     # 检查是否已打卡
     record = db.query(DailyCheckin).filter(DailyCheckin.user_id == user_id, DailyCheckin.date == today).first()

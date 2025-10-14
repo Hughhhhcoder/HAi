@@ -18,6 +18,7 @@ from app.models.reward import Reward
 from app.models.literature_file import LiteratureFile
 from app.models.literature_chunk import LiteratureChunk
 from app.services.user_service import create_user
+from app.core.psychology_roles import PSYCHOLOGY_AI_ROLES
 
 def init_db():
     print("[INFO] 开始初始化数据库...")
@@ -29,20 +30,20 @@ def init_db():
     print("[INFO] 创建所有表(如果不存在)...")
     Base.metadata.create_all(bind=engine)
     
-    print("[INFO] 插入默认AI角色...")
+    print("[INFO] 插入专业心理健康 AI 角色...")
     db = SessionLocal()
     if db.query(AIRole).count() == 0:
-        db.add_all([
+        # 从配置文件加载 10 个专业心理角色
+        roles = [
             AIRole(
-                role_name="温柔心理师",
-                prompt_template="你是温柔的心理咨询师，结合以下对话历史和用户提问，给出专业且温暖的建议。历史：{context} 用户：{user_msg}"
-            ),
-            AIRole(
-                role_name="元气生活教练",
-                prompt_template="你是充满活力的生活教练，结合以下对话历史和用户提问，给出积极、实用的生活建议。历史：{context} 用户：{user_msg}"
+                role_name=role["role_name"],
+                prompt_template=role["prompt_template"]
             )
-        ])
+            for role in PSYCHOLOGY_AI_ROLES
+        ]
+        db.add_all(roles)
         db.commit()
+        print(f"[INFO] 已创建 {len(roles)} 个专业心理健康 AI 角色")
     
     print("[INFO] 创建测试用户...")
     # 创建一个测试用户方便登录测试

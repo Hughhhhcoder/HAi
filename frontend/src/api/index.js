@@ -76,8 +76,44 @@ export const checkinApi = {
 export const aiApi = {
   getRoles: () => apiRequest('/ai/roles'),
   
-  chat: (userId, roleId, message, imageUrl = null, audioUrl = null) =>
+  chat: (userId, roleId, message, imageUrl = null, audioUrl = null, opts = {}) =>
     apiRequest('/ai/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: (() => {
+        // 合并默认字段与可选 opts.extraFields（例如 image_data_url）
+        const params = new URLSearchParams({
+          user_id: userId,
+          role_id: roleId.toString(),
+          message: message || '',
+          image_url: imageUrl || '',
+          audio_url: audioUrl || '',
+        })
+        // 支持通过 opts.extraFields 传入额外字段（不破坏现有调用）
+        if (opts && opts.extraFields && typeof opts.extraFields === 'object') {
+          Object.entries(opts.extraFields).forEach(([k, v]) => {
+            if (v !== undefined && v !== null) params.set(k, String(v))
+          })
+        }
+        return params
+      })(),
+      ...opts,
+    }),
+  stream: (userId, roleId, message, imageUrl = null) =>
+    fetch(`${API_BASE_URL}/ai/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        user_id: userId,
+        role_id: roleId.toString(),
+        message: message || '',
+        image_url: imageUrl || '',
+      })
+    }),
+  clearHistory: (userId, roleId) =>
+    apiRequest('/ai/clear', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -85,9 +121,6 @@ export const aiApi = {
       body: new URLSearchParams({
         user_id: userId,
         role_id: roleId.toString(),
-        message: message || '',
-        image_url: imageUrl || '',
-        audio_url: audioUrl || '',
       }),
     }),
     
