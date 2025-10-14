@@ -10,4 +10,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # Redis
-redis_client = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB, decode_responses=True) 
+redis_client = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB, decode_responses=True)
+
+# FastAPI 依赖注入
+def get_db():
+    """数据库会话依赖"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close() 

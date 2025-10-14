@@ -8,6 +8,7 @@ from app.api.psych import router as psych_router
 from app.api.plan import router as plan_router
 from app.api.checkin import router as checkin_router
 from app.api.rewards import router as rewards_router
+from app.api.knowledge import router as knowledge_router
 import os
 
 app = FastAPI(title="Hai 后端 API")
@@ -41,6 +42,7 @@ app.include_router(psych_router)
 app.include_router(plan_router)
 app.include_router(checkin_router)
 app.include_router(rewards_router)
+app.include_router(knowledge_router)
 
 @app.get("/ping")
 def ping():

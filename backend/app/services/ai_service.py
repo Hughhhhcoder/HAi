@@ -2,6 +2,12 @@ from sqlalchemy.orm import Session
 from app.models.ai_role import AIRole
 from app.core.database import redis_client
 from app.services.memory_service import get_user_profile_summary, extract_insights_from_conversation
+from app.services.knowledge_service import (
+    retrieve_knowledge_for_conversation, 
+    format_knowledge_for_prompt,
+    log_knowledge_usage
+)
+from app.models.user_memory import UserMemory
 import requests
 import os
 import json
@@ -112,6 +118,25 @@ def chat_with_ai(db: Session, user_id: int, role_id: int, user_msg: str, image_u
         # 获取用户画像（让 AI 了解用户）
         user_profile = get_user_profile_summary(db, user_id)
         
+        # 【知识增强】检索专业心理学知识
+        # 获取用户的困扰作为额外检索关键词
+        user_concerns = db.query(UserMemory.content)\
+            .filter(UserMemory.user_id == user_id, UserMemory.memory_type == "concern")\
+            .limit(3).all()
+        concern_list = [c[0] for c in user_concerns] if user_concerns else []
+        
+        # 检索相关知识
+        relevant_knowledge = retrieve_knowledge_for_conversation(
+            db=db,
+            role_id=role_id,
+            user_message=user_msg,
+            user_concerns=concern_list,
+            top_k=3
+        )
+        
+        # 格式化知识为 prompt
+        knowledge_text = format_knowledge_for_prompt(relevant_knowledge)
+        
         # 选择图片入参策略：data_url | https（默认 data_url）
         img = None
         if AI_IMAGE_INPUT_MODE == "https":
@@ -122,8 +147,26 @@ def chat_with_ai(db: Session, user_id: int, role_id: int, user_msg: str, image_u
         if isinstance(img, str) and img.startswith("/") and PUBLIC_BASE_URL:
             img = f"{PUBLIC_BASE_URL}{img}"
         
-        # 调用 AI API，传入用户画像
-        ai_reply = call_external_chat_api(role, context, user_msg, user_profile=user_profile, image_url=img, audio_url=audio_url)
+        # 调用 AI API，传入用户画像和专业知识
+        ai_reply = call_external_chat_api(
+            role, context, user_msg, 
+            user_profile=user_profile, 
+            professional_knowledge=knowledge_text,
+            image_url=img, 
+            audio_url=audio_url
+        )
+        
+        # 记录知识使用情况（便于后续分析）
+        if relevant_knowledge:
+            # 先获取刚保存的 conversation_id
+            from app.models.conversation import Conversation
+            last_conv = db.query(Conversation)\
+                .filter(Conversation.user_id == user_id, Conversation.role_id == role_id)\
+                .order_by(Conversation.created_at.desc())\
+                .first()
+            if last_conv:
+                knowledge_ids = [k.id for k in relevant_knowledge]
+                log_knowledge_usage(db, last_conv.id, knowledge_ids, user_id, role_id)
     else:
         ai_reply = mock_ai_reply(role.role_name, user_msg)
 
@@ -182,7 +225,7 @@ def clear_conversation(db: Session, user_id: int, role_id: int):
         # 忽略 Redis 清理失败
         pass
 
-def _build_messages_from_context(role: AIRole, context: list[str], user_msg: str, user_profile: str = "", image_url: str | None = None) -> list:
+def _build_messages_from_context(role: AIRole, context: list[str], user_msg: str, user_profile: str = "", professional_knowledge: str = "", image_url: str | None = None) -> list:
     messages = []
     # 系统提示词：使用角色模板并注入用户画像和上下文
     if role and role.prompt_template:
@@ -197,6 +240,10 @@ def _build_messages_from_context(role: AIRole, context: list[str], user_msg: str
         )
         # 移除占位符
         system_prompt = system_prompt.replace("{placeholder}", "")
+        
+        # 【知识增强】在系统提示词后追加专业知识
+        if professional_knowledge:
+            system_prompt = system_prompt + "\n\n" + professional_knowledge
         
         messages.append({"role": "system", "content": system_prompt})
 
@@ -218,7 +265,7 @@ def _build_messages_from_context(role: AIRole, context: list[str], user_msg: str
 
     return messages
 
-def call_external_chat_api(role: AIRole, context: list[str], user_msg: str, user_profile: str = "", image_url: str | None = None, audio_url: str | None = None) -> str:
+def call_external_chat_api(role: AIRole, context: list[str], user_msg: str, user_profile: str = "", professional_knowledge: str = "", image_url: str | None = None, audio_url: str | None = None) -> str:
     """调用外部对话接口（OpenAI 风格），返回字符串。带简单退避重试。"""
     if not AI_API_KEY or not AI_API_URL:
         return "[配置缺失] 请设置 AI_API_KEY 与 AI_API_URL 后再试"
@@ -228,7 +275,7 @@ def call_external_chat_api(role: AIRole, context: list[str], user_msg: str, user
         "Content-Type": "application/json"
     }
 
-    messages = _build_messages_from_context(role, context, user_msg, user_profile, image_url)
+    messages = _build_messages_from_context(role, context, user_msg, user_profile, professional_knowledge, image_url)
 
     def make_payload(msgs):
         return {
@@ -301,7 +348,7 @@ def call_external_chat_api(role: AIRole, context: list[str], user_msg: str, user
 
     return f"[API异常] 请求失败，请稍后再试"
 
-def call_external_chat_api_stream(role: AIRole, context: list[str], user_msg: str, user_profile: str = "", image_url: str | None = None):
+def call_external_chat_api_stream(role: AIRole, context: list[str], user_msg: str, user_profile: str = "", professional_knowledge: str = "", image_url: str | None = None):
     """生成器：以 SSE 形式逐段产出文本片段（纯字符串）。"""
     if not AI_API_KEY or not AI_API_URL:
         yield "配置缺失，请设置 AI_API_KEY 与 AI_API_URL"
@@ -313,7 +360,7 @@ def call_external_chat_api_stream(role: AIRole, context: list[str], user_msg: st
         "Accept": "text/event-stream",
     }
 
-    messages = _build_messages_from_context(role, context, user_msg, user_profile, image_url)
+    messages = _build_messages_from_context(role, context, user_msg, user_profile, professional_knowledge, image_url)
 
     payload = {
         "model": AI_MODEL,
