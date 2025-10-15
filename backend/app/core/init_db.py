@@ -15,8 +15,6 @@ from app.models.recovery_plan import RecoveryPlan
 from app.models.psych_test import PsychTest
 from app.models.daily_checkin import DailyCheckin
 from app.models.reward import Reward
-from app.models.literature_file import LiteratureFile
-from app.models.literature_chunk import LiteratureChunk
 from app.models.user_memory import UserMemory, UserInsight
 from app.models.psychology_knowledge import PsychologyKnowledge, KnowledgeUsageLog
 from app.services.user_service import create_user
@@ -34,7 +32,7 @@ def init_db():
     print("[INFO] 创建所有表(如果不存在)...")
     Base.metadata.create_all(bind=engine)
     
-    print("[INFO] 插入专业心理健康 AI 角色...")
+    print("[INFO] 插入/更新专业心理健康 AI 角色...")
     db = SessionLocal()
     if db.query(AIRole).count() == 0:
         # 从配置文件加载 10 个专业心理角色
@@ -48,6 +46,15 @@ def init_db():
         db.add_all(roles)
         db.commit()
         print(f"[INFO] 已创建 {len(roles)} 个专业心理健康 AI 角色")
+    else:
+        # 更新现有角色的 prompt_template
+        for i, role_data in enumerate(PSYCHOLOGY_AI_ROLES, start=1):
+            role = db.query(AIRole).filter(AIRole.id == i).first()
+            if role:
+                role.prompt_template = role_data["prompt_template"]
+                print(f"[INFO] 已更新角色 {i}: {role.role_name}")
+        db.commit()
+        print(f"[INFO] 已更新所有角色的专业提示词")
     
     print("[INFO] 插入专业心理学知识...")
     if db.query(PsychologyKnowledge).count() == 0:
