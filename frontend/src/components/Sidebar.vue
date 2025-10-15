@@ -24,7 +24,6 @@ const menu = [
   { to: '/psych/choose', label: '心理测评', emoji: '🧠' },
   { to: '/checkin/daily', label: '每日打卡', emoji: '✅' },
   { to: '/plan/profile', label: '生活计划', emoji: '📅' },
-  { to: '/literature/list', label: '文献库', emoji: '📚' },
   { to: '/rewards/points', label: '积分', emoji: '🏅' },
 ]
 function isActive(path) {
