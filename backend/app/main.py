@@ -13,10 +13,17 @@ import os
 
 app = FastAPI(title="Hai 后端 API")
 
-# 添加CORS中间件
+# 添加CORS中间件 - 允许局域网访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],  # 允许前端开发服务器
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://192.168.110.17:5174",  # 局域网 IP
+        "*"  # 开发环境允许所有来源（生产环境应移除）
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
