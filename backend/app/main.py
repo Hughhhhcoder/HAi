@@ -3,7 +3,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import user_router, ai_router
 from app.api.upload import router as upload_router
-from app.api.literature import router as literature_router
 from app.api.psych import router as psych_router
 from app.api.plan import router as plan_router
 from app.api.checkin import router as checkin_router
@@ -44,7 +43,6 @@ app.mount("/static/audio", StaticFiles(directory=static_audio_dir), name="static
 app.include_router(user_router)
 app.include_router(ai_router)
 app.include_router(upload_router)
-app.include_router(literature_router)
 app.include_router(psych_router)
 app.include_router(plan_router)
 app.include_router(checkin_router)

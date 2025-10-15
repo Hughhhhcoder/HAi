@@ -185,27 +185,6 @@ export const planApi = {
     apiRequest(`/plan/history?user_id=${userId}`),
 }
 
-// 文献相关API
-export const literatureApi = {
-  upload: (file) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return apiRequest('/literature/upload', {
-      method: 'POST',
-      headers: {}, // 让浏览器自动设置Content-Type
-      body: formData,
-    })
-  },
-  
-  getList: () => apiRequest('/literature/list'),
-  
-  getChunks: (fileId) =>
-    apiRequest(`/literature/chunks?file_id=${fileId}`),
-    
-  search: (query, topK = 3) =>
-    apiRequest(`/literature/search?query=${encodeURIComponent(query)}&top_k=${topK}`),
-}
-
 // 奖励相关API
 export const rewardsApi = {
   getPoints: (userId) =>
@@ -244,7 +223,6 @@ export default {
   aiApi,
   psychApi,
   planApi,
-  literatureApi,
   rewardsApi,
   uploadApi,
 } 
