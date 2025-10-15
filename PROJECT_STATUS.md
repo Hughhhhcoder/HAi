@@ -1,4 +1,4 @@
-项目现况（截至：2025-10-14）
+项目现况（截至：2025-10-15）
 
 一、总体概览
 - 前端：Vue 3 + Composition API，Vite，Tailwind CSS，Nginx 容器静态托管，开发/生产通过前端容器反代后端（/api、/static）。
@@ -11,16 +11,20 @@
   - **长期记忆系统**：AI 自动记住用户性格、困扰、目标等，对话越多越了解用户。
   - **个性化对话**：每次回复基于用户画像（作息、测评、打卡、记忆）。
   - AI 对话（角色选择、历史记录、清空会话），支持图片上传（最大 50MB）与消息内预览。
-  - 心理测评（PHQ9、GAD7）、生活作息信息、恢复计划生成（mock）、每日打卡与积分。
-  - 文献上传（PDF/TXT）、自动分段与检索（关键词计数 mock）。
+  - **心理测评系统（10 个专业量表）**：PHQ-9、GAD-7、PSS-10、PANAS、ECR-12、IRI、RSES、SCS、MBI-GS、PCL-5，覆盖情绪、人际、自我认知、职场、创伤 5 大领域。
+  - 生活作息信息、恢复计划生成（mock）、每日打卡与积分。
 
 二、目录与服务简述
 - backend/app/api
   - user：/user/register、/user/login
   - ai：/ai/roles（返回 10 个专业心理角色）、/ai/chat、/ai/history、/ai/clear、/ai/stream（SSE）。
   - upload：/upload/image 返回 {url, data_url}；/upload/audio 返回 {url}（无 data_url）。
-  - literature：上传/列表/分段/检索。
-  - psych、plan、checkin、rewards：心理测评、作息与计划、每日打卡、积分查询。
+  - **psych（心理测评系统升级）**：
+    - /psych/categories：返回 5 大分类和 10 个量表列表
+    - /psych/questionnaire：获取指定量表（支持 10 种）
+    - /psych/submit：智能评分引擎，支持总分、平均分、分量表、反向计分 4 种方式
+    - /psych/history：查询历史测评
+  - plan、checkin、rewards：作息与计划、每日打卡、积分查询。
 - backend/app/services
   - user_service：注册/验证（bcrypt）。
   - **memory_service（新增）**：
@@ -34,7 +38,8 @@
     - 外部大模型调用（OpenAI 风格），消息体支持 {type:text}/{type:image_url}；失败自动降级为文本包含图片链接。
     - SSE 流式生成器（call_external_chat_api_stream，前端支持但默认已回退到一次性渲染）。
 - backend/app/core
-  - **psychology_roles.py（新增）**：10 个专业心理 AI 角色配置，包含角色名、专业背景、咨询风格、核心方法、提示词模板。
+  - **psychology_roles.py**：10 个专业心理 AI 角色配置，包含角色名、专业背景、咨询风格、核心方法、提示词模板。
+  - **psych_questionnaires.py（新增）**：集中管理所有 10 个心理测评量表，包含题目、选项、评分规则、解释标准（500+ 行）。
   - init_db.py：初始化数据库表和加载 10 个专业角色。
 - backend/app/models
   - **user_memory.py（新增）**：UserMemory（用户记忆）、UserInsight（用户洞察）数据模型。
@@ -66,27 +71,36 @@
   - 接口文档：http://localhost:8000/docs
 
 四、近期变更（关键里程碑）
-1) **AI 心理健康专业化升级（2025-10-14）**
+1) **心理测评系统大幅扩展（2025-10-15）**
+   - 从 2 个量表扩展到 **10 个国际标准专业量表**（400% 增长）
+   - 新增 8 个量表：PSS-10（压力）、PANAS（情绪）、ECR-12（依恋）、IRI（共情）、RSES（自尊）、SCS（自我同情）、MBI-GS（倦怠）、PCL-5（PTSD）
+   - 5 大分类系统：情绪与心境、人际关系、自我认知、职场与学业、创伤与应激
+   - 智能评分引擎：支持总分、平均分、分量表、反向计分 4 种方式
+   - 前端 UI 全面升级：分类导航、渐变色卡片、进度条、分量表结果展示
+   - 数据库扩展：psych_tests 新增 result_json 字段存储完整结果
+   - 新增 backend/app/core/psych_questionnaires.py（500+ 行配置文件）
+
+2) **AI 心理健康专业化升级（2025-10-14）**
    - 10 个专业心理 AI 角色替代原有 2 个通用角色
    - 长期记忆系统：AI 会记住用户性格、困扰、目标等
    - 个性化对话：基于用户画像（作息、测评、打卡、记忆）生成回复
    - 自动洞察提取：从对话中识别关键信息并保存
    - 数据库新增 user_memories 和 user_insights 表
    - 新增 memory_service 服务和 psychology_roles 配置
-2) 容器化与文档
+3) 容器化与文档
    - 新增 backend/frontend Dockerfile；docker-compose 一键启动；README 与 CHANGELOG 整理。
-3) 前后端联调与对话体验
+4) 前后端联调与对话体验
    - 修复 AI 回复字段不一致（前端读取 reply；后端返回 reply）。
    - 新增 /ai/clear 清空历史（数据库+Redis）。
    - 修复图片上传后不立即显示在聊天框的问题。
    - Markdown 渲染 + DOMPurify 清洗（AI 回复排版更清晰）。
-4) 图片上传与多模态
+5) 图片上传与多模态
    - /upload/image 返回 {url, data_url}；前端发送时携带 image_url 与 image_data_url。
    - Nginx client_max_body_size 提升至 50M 支持大图片。
    - AI_IMAGE_INPUT_MODE=data_url（图片以 base64 传递，稳定可靠）。
    - 外部模型调用：OpenAI 风格 messages.content = [{type:text},{type:image_url:{url}}]。
    - 若上游 400/404，自动降级为把图片 URL 拼进文本后重试。
-5) AI 模型与平台
+6) AI 模型与平台
    - 当前使用：api.gpt.ge + gpt-4o-all（支持多模态）
    - 图片传递：data_url 模式（不依赖外部 URL，更稳定）
 
@@ -103,9 +117,13 @@
   - 发送图片：
     - 上传与预览：成功（最大 50MB，立即显示在聊天框）。
     - 模型理解：gpt-4o-all 正常识别图片并回复（data_url 模式）。
-- 心理测评：PHQ9、GAD7 问卷提交和历史查询正常。
+- **心理测评（已大幅升级）**：
+  - **10 个专业量表**：PHQ-9、GAD-7、PSS-10、PANAS、ECR-12、IRI、RSES、SCS、MBI-GS、PCL-5。
+  - **5 大分类**：情绪与心境、人际关系、自我认知、职场与学业、创伤与应激。
+  - **智能评分**：支持总分、平均分、分量表（如 PANAS 的积极情绪+消极情绪）、反向计分。
+  - **专业解释**：每个量表都有科学的分数区间、等级、颜色编码、专业建议。
+  - 前端 UI：分类导航、渐变色卡片、实时进度条、分量表结果展示。
 - 打卡与积分：每日打卡+5分，积分历史可查。
-- 文献上传：PDF/TXT 解析和分段检索（mock）正常。
 - 静态资源：
   - 前端 5174/static/* 和 /uploads/* 可访问。
 
@@ -124,6 +142,11 @@
    - 用户可查看自己的记忆和画像（"我的画像"页面）
    - 每个 AI 角色的专业介绍和适合问题展示
    - 记忆管理（用户可编辑/删除不准确的记忆）
+
+4) 心理测评可优化项
+   - 测评结果可视化（趋势图、雷达图）
+   - 智能推荐（根据测评结果推荐合适的 AI 角色）
+   - 报告导出（PDF 报告生成）
 
 七、风险与影响
 - 外部 API 依赖：模型名/计费/限流/网络情况会直接影响用户体验。
