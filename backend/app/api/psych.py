@@ -3,46 +3,13 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.psych_test import PsychTest
+from app.core.psych_questionnaires import QUESTIONNAIRES, get_test_categories
 import json
 from datetime import datetime
 
 router = APIRouter(prefix="/psych", tags=["psych"])
 
-# 问卷题库
-PHQ9_QUESTIONS = [
-    "在过去的两周里，您感到心情郁闷、沮丧或绝望吗？",
-    "在过去的两周里，您对做事失去兴趣或乐趣了吗？",
-    "在过去的两周里，您入睡困难、睡不安稳或睡得过多吗？",
-    "在过去的两周里，您感到疲倦或没有活力吗？",
-    "在过去的两周里，您食欲不振或吃得过多吗？",
-    "在过去的两周里，您觉得自己很糟糕，觉得自己让家人失望，或觉得自己是个失败者吗？",
-    "在过去的两周里，您对事物专注有困难吗？",
-    "在过去的两周里，您动作或说话变慢，或变得比平时更烦躁或坐立不安吗？",
-    "在过去的两周里，您有想过死，或用某种方式伤害自己吗？"
-]
-GAD7_QUESTIONS = [
-    "在过去的两周里，您感到紧张、焦虑或急躁吗？",
-    "在过去的两周里，您无法停止或控制担忧吗？",
-    "在过去的两周里，您对各种事情过度担忧吗？",
-    "在过去的两周里，您很难放松下来吗？",
-    "在过去的两周里，您感到坐立不安，难以静坐吗？",
-    "在过去的两周里，您容易变得烦躁或容易生气吗？",
-    "在过去的两周里，您感到害怕，好像有什么可怕的事情会发生吗？"
-]
-OPTIONS = [
-    {"text": "完全没有", "score": 0},
-    {"text": "有几天", "score": 1},
-    {"text": "一半以上天数", "score": 2},
-    {"text": "几乎每天", "score": 3}
-]
-
-QUESTIONNAIRES = {
-    "PHQ9": {"title": "PHQ-9 抑郁自评量表", "questions": PHQ9_QUESTIONS, "options": OPTIONS},
-    "GAD7": {"title": "GAD-7 焦虑自评量表", "questions": GAD7_QUESTIONS, "options": OPTIONS}
-}
-
 # 依赖
-
 def get_db():
     db = SessionLocal()
     try:
@@ -50,12 +17,29 @@ def get_db():
     finally:
         db.close()
 
+# 获取所有测评分类和列表
+@router.get("/categories")
+def get_all_categories():
+    """获取所有测评分类及其下的量表列表"""
+    return get_test_categories()
+
 # 获取问卷题目
 @router.get("/questionnaire")
 def get_questionnaire(test_type: str):
+    """获取指定量表的完整信息"""
     if test_type not in QUESTIONNAIRES:
         raise HTTPException(status_code=400, detail="不支持的问卷类型")
-    return QUESTIONNAIRES[test_type]
+    
+    config = QUESTIONNAIRES[test_type]
+    return {
+        "title": config["title"],
+        "abbr": config["abbr"],
+        "category": config["category"],
+        "description": config["description"],
+        "time": config["time"],
+        "questions": config["questions"],
+        "options": config["options"]
+    }
 
 # 提交测评
 class PsychSubmit(BaseModel):
@@ -68,25 +52,42 @@ def submit_psych_test(payload: PsychSubmit, db: Session = Depends(get_db)):
     user_id = payload.user_id
     test_type = payload.test_type
     answers = payload.answers
+    
     if test_type not in QUESTIONNAIRES:
         raise HTTPException(status_code=400, detail="不支持的问卷类型")
-    questions = QUESTIONNAIRES[test_type]["questions"]
+    
+    config = QUESTIONNAIRES[test_type]
+    questions = config["questions"]
+    
     if len(answers) != len(questions):
         raise HTTPException(status_code=400, detail="答案数量与题目数量不符")
-    score = sum(answers)
+    
+    # 计算分数
+    result = calculate_score(test_type, answers, config)
+    
     # 生成建议
-    suggestion = get_suggestion(test_type, score)
+    suggestion = get_suggestion(test_type, result, config)
+    
     # 存储
     record = PsychTest(
         user_id=user_id,
         test_type=test_type,
         answers_json=json.dumps(answers, ensure_ascii=False),
-        score=score
+        score=result.get("total_score", 0),
+        result_json=json.dumps(result, ensure_ascii=False)
     )
     db.add(record)
     db.commit()
     db.refresh(record)
-    return {"score": score, "suggestion": suggestion, "record_id": record.id}
+    
+    return {
+        "score": result.get("total_score", 0),
+        "subscores": result.get("subscores", {}),
+        "suggestion": suggestion,
+        "level": result.get("level", ""),
+        "color": result.get("color", "green"),
+        "record_id": record.id
+    }
 
 # 查询历史
 @router.get("/history")
@@ -95,35 +96,119 @@ def get_psych_history(user_id: int, test_type: str = None, db: Session = Depends
     if test_type:
         q = q.filter(PsychTest.test_type == test_type)
     records = q.order_by(PsychTest.date.desc()).all()
-    return [{
-        "id": r.id,
-        "test_type": r.test_type,
-        "score": r.score,
-        "date": r.date,
-        "answers": json.loads(r.answers_json)
-    } for r in records]
+    
+    result_list = []
+    for r in records:
+        item = {
+            "id": r.id,
+            "test_type": r.test_type,
+            "score": r.score,
+            "date": r.date,
+            "answers": json.loads(r.answers_json)
+        }
+        # 如果有result_json，也返回
+        if r.result_json:
+            item["result"] = json.loads(r.result_json)
+        result_list.append(item)
+    
+    return result_list
 
-# 建议生成逻辑
+# ==================== 评分逻辑 ====================
 
-def get_suggestion(test_type: str, score: int) -> str:
-    if test_type == "PHQ9":
-        if score < 5:
-            return "无抑郁症状或极轻微。建议保持良好心态。"
-        elif score < 10:
-            return "轻度抑郁。建议适当放松，关注自我情绪。"
-        elif score < 15:
-            return "中度抑郁。建议寻求心理支持，必要时咨询专业人士。"
-        elif score < 20:
-            return "中重度抑郁。建议尽快寻求专业心理帮助。"
+def calculate_score(test_type: str, answers: list[int], config: dict) -> dict:
+    """
+    计算测评分数
+    支持多种计分方式：sum（总分）、average（平均分）、subscale（分量表）
+    """
+    scoring_type = config.get("scoring_type", "sum")
+    reverse_items = config.get("reverse_items", [])
+    
+    # 处理反向计分（先转换答案）
+    processed_answers = []
+    for i, ans in enumerate(answers):
+        if i in reverse_items:
+            # 反向计分：根据选项数量决定反转方式
+            max_score = max([opt["score"] for opt in config["options"]])
+            min_score = min([opt["score"] for opt in config["options"]])
+            reversed_score = max_score + min_score - ans
+            processed_answers.append(reversed_score)
         else:
-            return "重度抑郁。建议立即联系专业心理医生。"
-    elif test_type == "GAD7":
-        if score < 5:
-            return "无焦虑症状或极轻微。建议保持良好心态。"
-        elif score < 10:
-            return "轻度焦虑。建议适当放松，关注自我情绪。"
-        elif score < 15:
-            return "中度焦虑。建议寻求心理支持，必要时咨询专业人士。"
-        else:
-            return "重度焦虑。建议尽快寻求专业心理帮助。"
-    return "--" 
+            processed_answers.append(ans)
+    
+    result = {}
+    
+    if scoring_type == "sum":
+        # 简单求和
+        total = sum(processed_answers)
+        result["total_score"] = total
+        
+        # 查找对应的等级和颜色
+        for range_info in config["interpretation"]["ranges"]:
+            if range_info["min"] <= total <= range_info["max"]:
+                result["level"] = range_info["level"]
+                result["color"] = range_info["color"]
+                result["advice"] = range_info["advice"]
+                break
+    
+    elif scoring_type == "average":
+        # 平均分
+        avg = sum(processed_answers) / len(processed_answers)
+        result["total_score"] = round(avg, 2)
+        
+        # 查找对应的等级和颜色
+        for range_info in config["interpretation"]["ranges"]:
+            if range_info["min"] <= avg <= range_info["max"]:
+                result["level"] = range_info["level"]
+                result["color"] = range_info["color"]
+                result["advice"] = range_info["advice"]
+                break
+    
+    elif scoring_type == "subscale":
+        # 分量表计分
+        subscales = config["subscales"]
+        subscores = {}
+        
+        for sub_key, sub_info in subscales.items():
+            sub_items = sub_info["items"]
+            sub_answers = [processed_answers[i] for i in sub_items]
+            sub_total = sum(sub_answers)
+            subscores[sub_key] = {
+                "name": sub_info["name"],
+                "score": sub_total
+            }
+            
+            # 查找该分量表的等级
+            if sub_key in config["interpretation"]:
+                for range_info in config["interpretation"][sub_key]:
+                    if range_info["min"] <= sub_total <= range_info["max"]:
+                        subscores[sub_key]["level"] = range_info["level"]
+                        subscores[sub_key]["color"] = range_info["color"]
+                        subscores[sub_key]["advice"] = range_info["advice"]
+                        break
+        
+        result["subscores"] = subscores
+        result["total_score"] = sum([s["score"] for s in subscores.values()])
+    
+    return result
+
+def get_suggestion(test_type: str, result: dict, config: dict) -> str:
+    """
+    生成专业建议
+    """
+    scoring_type = config.get("scoring_type", "sum")
+    
+    if scoring_type in ["sum", "average"]:
+        # 单一分数的建议
+        return result.get("advice", "测评完成。")
+    
+    elif scoring_type == "subscale":
+        # 分量表的综合建议
+        subscores = result.get("subscores", {})
+        suggestions = []
+        
+        for sub_key, sub_data in subscores.items():
+            suggestions.append(f"【{sub_data['name']}】{sub_data.get('level', '')}（{sub_data['score']}分）：{sub_data.get('advice', '')}")
+        
+        return "\n\n".join(suggestions)
+    
+    return "测评完成。"

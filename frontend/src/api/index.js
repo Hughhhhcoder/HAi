@@ -130,9 +130,15 @@ export const aiApi = {
 
 // 心理测试相关API
 export const psychApi = {
+  // 获取所有分类和量表列表
+  getCategories: () =>
+    apiRequest('/psych/categories'),
+  
+  // 获取指定量表的问卷
   getQuestionnaire: (testType) =>
     apiRequest(`/psych/questionnaire?test_type=${testType}`),
     
+  // 提交测评
   submitTest: (userId, testType, answers) =>
     apiRequest('/psych/submit', {
       method: 'POST',
@@ -143,6 +149,7 @@ export const psychApi = {
       }),
     }),
     
+  // 获取历史记录
   getHistory: (userId, testType = null) => {
     const url = testType 
       ? `/psych/history?user_id=${userId}&test_type=${testType}`
