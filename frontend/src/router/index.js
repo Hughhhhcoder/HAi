@@ -1,8 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginNew from '../pages/LoginNew.vue'
 import Register from '../pages/Register.vue'
-import Home from '../pages/Home.vue'
-import HomeV2 from '../pages/HomeV2.vue'
+import HomeNew from '../pages/HomeNew.vue'
 import AiRoles from '../pages/AiRoles.vue'
 import PsychChoose from '../pages/PsychChoose.vue'
 import PlanProfile from '../pages/PlanProfile.vue'
@@ -14,8 +13,7 @@ const routes = [
   { path: '/', redirect: '/login' },
   { path: '/login', component: LoginNew }, // 全新的高级登录页面（3D效果+流体背景）
   { path: '/register', component: Register },
-  { path: '/home', component: HomeV2 },
-  { path: '/home-old', component: Home }, // 保留旧版本
+  { path: '/home', component: HomeNew }, // 全新的Dashboard主页（数据可视化+微交互）
   { path: '/ai/roles', component: AiRoles },
   { path: '/psych/choose', component: PsychChoose },
   { path: '/plan/profile', component: PlanProfile },
