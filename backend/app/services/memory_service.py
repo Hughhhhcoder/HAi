@@ -248,105 +248,345 @@ def update_profile_with_psych_test(
     result: dict
 ):
     """
-    将心理测评结果整合到用户画像中
+    将心理测评结果整合到用户画像中 - 生成专业详细的测评信息
     
     Args:
         db: 数据库会话
         user_id: 用户ID
         test_type: 测评类型
         score: 得分
-        result: 测评结果字典（包含level, subscale_scores等）
+        result: 测评结果字典（包含level, subscale_scores, suggestion等）
     """
-    level = result.get("level", "未知")
+    from app.core.psych_questionnaires import QUESTIONNAIRES
     
-    # 根据测评类型和结果，提取关键洞察
+    # 获取量表配置
+    config = QUESTIONNAIRES.get(test_type, {})
+    test_title = config.get("abbr", test_type)
+    
+    level = result.get("level", "未知")
+    color = result.get("color", "gray")
+    suggestion = result.get("suggestion", "")
+    
+    # 根据测评类型和结果，生成专业的测评信息描述
     insight_updates = {}
     
-    # 1. 情绪与心境类 - 更新主要困扰
-    if test_type in ["PHQ9", "GAD7", "PSS14"]:
-        concern_map = {
-            "PHQ9": "抑郁",
-            "GAD7": "焦虑",
-            "PSS14": "压力"
-        }
-        concern_type = concern_map.get(test_type, "情绪")
-        
-        if level in ["中度", "中重度", "重度", "高压力"]:
-            # 更新主要困扰
+    # ==================== 1. 情绪与心境类 ====================
+    if test_type == "PHQ9":
+        # PHQ-9 抑郁评估
+        if score >= 10:  # 中度及以上
+            professional_desc = f"""【抑郁症状评估 - PHQ-9】
+等级: {level} (总分 {score}/27)
+临床意义: """
+            if score >= 20:
+                professional_desc += "重度抑郁症状，强烈建议寻求专业心理/精神科医生评估。可能需要药物治疗结合心理治疗。"
+            elif score >= 15:
+                professional_desc += "中重度抑郁症状，建议尽快寻求专业帮助。心理咨询或认知行为疗法(CBT)可能有效。"
+            elif score >= 10:
+                professional_desc += "中度抑郁症状，建议考虑心理咨询。可以尝试自我调节（运动、社交、正念）结合专业支持。"
+            
+            professional_desc += f"\n主要表现: {_extract_phq9_symptoms(score)}"
+            professional_desc += f"\n专业建议: {suggestion[:100]}..."
+            
+            insight_updates["main_concerns"] = professional_desc
+    
+    elif test_type == "GAD7":
+        # GAD-7 焦虑评估
+        if score >= 10:  # 中度及以上
+            professional_desc = f"""【焦虑症状评估 - GAD-7】
+等级: {level} (总分 {score}/21)
+临床意义: """
+            if score >= 15:
+                professional_desc += "重度焦虑症状，建议专业评估。可能需要药物治疗和/或认知行为疗法。"
+            elif score >= 10:
+                professional_desc += "中度焦虑症状，建议寻求心理咨询。CBT、正念减压(MBSR)等方法有效。"
+            
+            professional_desc += f"\n主要表现: 过度担忧、紧张不安、难以放松、坐立不安"
+            professional_desc += f"\n专业建议: {suggestion[:100]}..."
+            
+            # 追加而非替换
             existing_insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
             current_concerns = existing_insight.main_concerns if existing_insight and existing_insight.main_concerns else ""
-            
-            if concern_type not in current_concerns:
-                new_concerns = f"{current_concerns}, {concern_type}({level})" if current_concerns else f"{concern_type}({level})"
-                insight_updates["main_concerns"] = new_concerns.strip(", ")
+            if current_concerns:
+                insight_updates["main_concerns"] = f"{current_concerns}\n\n{professional_desc}"
+            else:
+                insight_updates["main_concerns"] = professional_desc
     
-    # 2. 人际关系类 - 更新人际模式
-    if test_type == "ECR36":
+    elif test_type == "PSS14":
+        # PSS-14 压力知觉评估
+        if score >= 28:  # 高压力
+            professional_desc = f"""【压力知觉评估 - PSS-14】
+等级: {level} (总分 {score}/56)
+临床意义: 压力知觉水平较高，可能影响身心健康。长期高压力与焦虑、抑郁、心血管疾病等相关。
+主要来源: 时间失控感、应对困难、情绪压力累积
+专业建议: {suggestion[:150]}..."""
+            
+            existing_insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
+            current_concerns = existing_insight.main_concerns if existing_insight and existing_insight.main_concerns else ""
+            if current_concerns:
+                insight_updates["main_concerns"] = f"{current_concerns}\n\n{professional_desc}"
+            else:
+                insight_updates["main_concerns"] = professional_desc
+    
+    elif test_type == "PANAS":
+        # PANAS 情绪评估
+        subscale_scores = result.get("subscale_scores", {})
+        pos_score = subscale_scores.get("积极情绪", 0)
+        neg_score = subscale_scores.get("消极情绪", 0)
+        
+        professional_desc = f"""【情绪状态评估 - PANAS】
+积极情绪: {pos_score}/50 ({_panas_level(pos_score, True)})
+消极情绪: {neg_score}/50 ({_panas_level(neg_score, False)})
+情绪平衡: """
+        
+        if pos_score >= 35 and neg_score <= 20:
+            professional_desc += "良好，积极情绪充沛，消极情绪控制良好"
+            # 更新优势
+            insight_updates["strengths"] = _update_strength(db, user_id, "情绪调节良好，积极情绪丰富")
+        elif pos_score < 25 or neg_score >= 30:
+            professional_desc += "需关注，建议通过积极心理学干预提升积极情绪，通过正念/CBT降低消极情绪"
+            insight_updates["coping_patterns"] = professional_desc
+        else:
+            professional_desc += "中等水平"
+            insight_updates["coping_patterns"] = professional_desc
+    
+    # ==================== 2. 人际关系类 ====================
+    elif test_type == "ECR36":
+        # ECR-36 依恋风格评估
+        subscale_scores = result.get("subscale_scores", {})
         subscale_levels = result.get("subscale_levels", {})
+        anxiety_score = subscale_scores.get("关系焦虑", 0)
+        avoidance_score = subscale_scores.get("关系回避", 0)
         anxiety_level = subscale_levels.get("关系焦虑", "")
         avoidance_level = subscale_levels.get("关系回避", "")
         
-        if anxiety_level or avoidance_level:
-            coping_pattern = f"依恋风格: {anxiety_level}焦虑, {avoidance_level}回避"
-            insight_updates["coping_patterns"] = coping_pattern
-    
-    # 3. 自我认知类 - 更新核心特质
-    if test_type == "RSES":
-        if level in ["低自尊", "中等自尊"]:
-            insight_updates["core_traits"] = f"自尊水平: {level}"
-    
-    if test_type == "SCS26":
-        if level in ["低自我同情", "中等自我同情"]:
-            insight_updates["core_traits"] = f"自我同情: {level}"
-    
-    # 4. 职场倦怠 - 更新困扰
-    if test_type == "MBI22":
-        subscale_levels = result.get("subscale_levels", {})
-        exhaustion = subscale_levels.get("情绪耗竭", "")
+        professional_desc = f"""【依恋风格评估 - ECR-36】
+关系焦虑: {anxiety_score}/126 ({anxiety_level})
+  - 反映对被抛弃的恐惧、需要保证、担心伴侣不够在意自己
+关系回避: {avoidance_score}/126 ({avoidance_level})
+  - 反映对亲密的不适、难以依赖他人、情感表达困难
+
+依恋类型判断: {_ecr_attachment_type(anxiety_level, avoidance_level)}
+临床意义: """
         
-        if "高" in exhaustion or "中等" in exhaustion:
+        if "高" in anxiety_level or "高" in avoidance_level:
+            professional_desc += "存在不安全依恋模式，可能影响亲密关系质量。"
+            if "高" in anxiety_level:
+                professional_desc += "建议关注自我价值感提升、焦虑管理。"
+            if "高" in avoidance_level:
+                professional_desc += "建议练习情感表达、建立信任。"
+            professional_desc += "\n推荐: 情绪聚焦疗法(EFT)、依恋导向的伴侣治疗"
+        else:
+            professional_desc += "依恋模式相对安全，有助于建立稳定的亲密关系。"
+        
+        insight_updates["coping_patterns"] = professional_desc
+    
+    elif test_type == "IRI28":
+        # IRI-28 共情能力评估
+        subscale_scores = result.get("subscale_scores", {})
+        subscale_levels = result.get("subscale_levels", {})
+        
+        professional_desc = f"""【共情能力评估 - IRI-28】
+观点采择: {subscale_scores.get('观点采择', 0)}/28 ({subscale_levels.get('观点采择', '')})
+  - 理解他人立场和视角的认知能力
+幻想: {subscale_scores.get('幻想', 0)}/28 ({subscale_levels.get('幻想', '')})
+  - 投入虚构世界的想象倾向
+共情关注: {subscale_scores.get('共情关注', 0)}/28 ({subscale_levels.get('共情关注', '')})
+  - 对他人困境的关心和同情
+个人痛苦: {subscale_scores.get('个人痛苦', 0)}/28 ({subscale_levels.get('个人痛苦', '')})
+  - 面对他人痛苦时的焦虑和不适"""
+        
+        # 提取优势
+        strengths = []
+        if "高" in subscale_levels.get("观点采择", ""):
+            strengths.append("善于理解他人、换位思考能力强")
+        if "高" in subscale_levels.get("共情关注", ""):
+            strengths.append("富有同情心、关心他人")
+        
+        if strengths:
+            insight_updates["strengths"] = _update_strength(db, user_id, ", ".join(strengths))
+        
+        # 如果个人痛苦过高，记录应对模式
+        if "高" in subscale_levels.get("个人痛苦", ""):
+            professional_desc += "\n\n需关注: 共情痛苦(empathic distress)较高，建议学习情绪边界设置，避免过度共情导致的二次创伤。"
+            insight_updates["coping_patterns"] = professional_desc
+        else:
+            insight_updates["coping_patterns"] = professional_desc
+    
+    # ==================== 3. 自我认知类 ====================
+    elif test_type == "RSES":
+        # RSES 自尊评估
+        professional_desc = f"""【自尊水平评估 - RSES】
+总分: {score}/40
+等级: {level}
+临床意义: """
+        
+        if score < 30:
+            professional_desc += "自尊水平较低，可能存在负面自我评价、自我价值感不足。与抑郁、焦虑风险相关。"
+            professional_desc += "\n建议: 认知重构(CBT)、自我同情练习(Self-Compassion)、优势识别"
+            insight_updates["core_traits"] = professional_desc
+        elif score >= 30 and score < 35:
+            professional_desc += "自尊水平中等，可通过肯定自己的成就和优点进一步提升。"
+            insight_updates["core_traits"] = professional_desc
+        else:
+            professional_desc += "自尊水平良好，对自己有积极的评价，有助于心理韧性。"
+            insight_updates["strengths"] = _update_strength(db, user_id, "自尊感良好，自我接纳度高")
+    
+    elif test_type == "SCS26":
+        # SCS-26 自我同情评估
+        subscale_scores = result.get("subscale_scores", {})
+        subscale_levels = result.get("subscale_levels", {})
+        
+        professional_desc = f"""【自我同情评估 - SCS-26】
+平均分: {score:.2f}/7
+等级: {level}
+
+六个维度:
+• 自我友善: {subscale_scores.get('自我友善', 0):.2f} ({subscale_levels.get('自我友善', '')})
+• 自我批判: {subscale_scores.get('自我批判', 0):.2f} ({subscale_levels.get('自我批判', '')}) [反向]
+• 普遍人性: {subscale_scores.get('普遍人性', 0):.2f} ({subscale_levels.get('普遍人性', '')})
+• 孤立: {subscale_scores.get('孤立', 0):.2f} ({subscale_levels.get('孤立', '')}) [反向]
+• 正念: {subscale_scores.get('正念', 0):.2f} ({subscale_levels.get('正念', '')})
+• 过度认同: {subscale_scores.get('过度认同', 0):.2f} ({subscale_levels.get('过度认同', '')}) [反向]
+
+临床意义: """
+        
+        if score < 2.5:
+            professional_desc += "自我同情水平较低，可能对自己过于苛刻。建议学习自我关怀技巧(Kristin Neff的自我同情练习)。"
+        elif score >= 3.5:
+            professional_desc += "自我同情水平良好，能以友善和理解的态度对待自己。"
+            insight_updates["strengths"] = _update_strength(db, user_id, "自我同情水平高，善于自我关怀")
+        else:
+            professional_desc += "自我同情水平中等，可通过练习进一步提升。"
+        
+        insight_updates["core_traits"] = professional_desc
+    
+    # ==================== 4. 职场与学业类 ====================
+    elif test_type == "MBI22":
+        # MBI-22 职业倦怠评估
+        subscale_scores = result.get("subscale_scores", {})
+        subscale_levels = result.get("subscale_levels", {})
+        
+        professional_desc = f"""【职业倦怠评估 - MBI-22】
+情绪耗竭: {subscale_scores.get('情绪耗竭', 0)}/54 ({subscale_levels.get('情绪耗竭', '')})
+  - 精疲力竭、情感资源耗尽、无力应对工作
+去人格化: {subscale_scores.get('去人格化', 0)}/30 ({subscale_levels.get('去人格化', '')})
+  - 对工作对象冷漠、疏离、玩世不恭
+个人成就感: {subscale_scores.get('个人成就感', 0)}/48 ({subscale_levels.get('个人成就感', '')})
+  - 工作效能感和成就感的自我评价
+
+综合评估: """
+        
+        if "高" in subscale_levels.get("情绪耗竭", "") or "高" in subscale_levels.get("去人格化", ""):
+            professional_desc += "存在明显职业倦怠症状，建议：\n"
+            professional_desc += "1. 工作-生活平衡调整\n"
+            professional_desc += "2. 压力管理技巧(正念、放松训练)\n"
+            professional_desc += "3. 社会支持系统建立\n"
+            professional_desc += "4. 必要时寻求职业心理咨询"
+            
             existing_insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
             current_concerns = existing_insight.main_concerns if existing_insight and existing_insight.main_concerns else ""
-            
-            if "职业倦怠" not in current_concerns:
-                new_concerns = f"{current_concerns}, 职业倦怠({exhaustion}耗竭)" if current_concerns else f"职业倦怠({exhaustion}耗竭)"
-                insight_updates["main_concerns"] = new_concerns.strip(", ")
-    
-    # 5. 创伤应激 - 更新触发因素
-    if test_type == "PCL5_20":
-        if level in ["中度PTSD症状", "重度PTSD症状"]:
-            insight_updates["triggers"] = f"存在创伤后应激症状({level})"
-    
-    # 提取积极方面 - 更新优势
-    strengths = []
-    if test_type == "PANAS":
-        subscale_scores = result.get("subscale_scores", {})
-        positive_score = subscale_scores.get("积极情绪", 0)
-        if positive_score >= 35:
-            strengths.append("积极情绪丰富")
-    
-    if test_type == "RSES" and level == "高自尊":
-        strengths.append("自尊感良好")
-    
-    if test_type == "IRI28":
-        subscale_levels = result.get("subscale_levels", {})
-        if "高" in subscale_levels.get("共情关注", ""):
-            strengths.append("共情能力强")
-        if "高" in subscale_levels.get("观点采择", ""):
-            strengths.append("善于理解他人")
-    
-    if strengths:
-        existing_insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
-        current_strengths = existing_insight.strengths if existing_insight and existing_insight.strengths else ""
-        new_strengths_text = ", ".join(strengths)
-        
-        if current_strengths:
-            insight_updates["strengths"] = f"{current_strengths}, {new_strengths_text}"
+            if current_concerns:
+                insight_updates["main_concerns"] = f"{current_concerns}\n\n{professional_desc}"
+            else:
+                insight_updates["main_concerns"] = professional_desc
         else:
-            insight_updates["strengths"] = new_strengths_text
+            professional_desc += "职业倦怠水平在可控范围内。"
+            insight_updates["coping_patterns"] = professional_desc
+    
+    # ==================== 5. 创伤与应激类 ====================
+    elif test_type == "PCL5_20":
+        # PCL-5 PTSD评估
+        subscale_scores = result.get("subscale_scores", {})
+        subscale_levels = result.get("subscale_levels", {})
+        
+        professional_desc = f"""【创伤后应激障碍评估 - PCL-5】
+总分: {score}/80
+等级: {level}
+
+DSM-5 四个症状簇:
+B. 侵入症状: {subscale_scores.get('侵入症状', 0)}/20 ({subscale_levels.get('侵入症状', '')})
+   - 闯入性记忆、噩梦、闪回
+C. 回避症状: {subscale_scores.get('回避症状', 0)}/8 ({subscale_levels.get('回避症状', '')})
+   - 回避创伤相关的想法、感受、提示
+D. 负性改变: {subscale_scores.get('认知情绪负性改变', 0)}/28 ({subscale_levels.get('认知情绪负性改变', '')})
+   - 负面信念、情绪麻木、兴趣丧失
+E. 警觉改变: {subscale_scores.get('警觉性改变', 0)}/24 ({subscale_levels.get('警觉性改变', '')})
+   - 过度警觉、易受惊吓、注意力问题
+
+临床意义: """
+        
+        if score >= 31:  # 中度及以上
+            professional_desc += "存在显著PTSD症状，强烈建议寻求创伤专科治疗。"
+            professional_desc += "\n推荐疗法: EMDR(眼动脱敏再处理)、创伤聚焦CBT、叙事暴露疗法"
+            professional_desc += "\n重要: 创伤治疗需专业指导，切勿自行处理创伤记忆"
+            insight_updates["triggers"] = professional_desc
+        elif score >= 21:
+            professional_desc += "存在轻度PTSD症状，建议心理咨询评估。"
+            insight_updates["triggers"] = professional_desc
+        else:
+            professional_desc += "PTSD症状轻微或不显著。"
     
     # 应用更新
     if insight_updates:
         update_user_insight(db, user_id, **insight_updates)
-        print(f"[INFO] 已更新用户 {user_id} 的画像: {insight_updates}")
+        print(f"[INFO] 已更新用户 {user_id} 的专业测评画像，更新字段: {list(insight_updates.keys())}")
+
+
+# ==================== 辅助函数 ====================
+
+def _extract_phq9_symptoms(score: int) -> str:
+    """根据PHQ-9分数推断可能的主要症状"""
+    if score >= 20:
+        return "兴趣丧失、情绪低落、疲劳、睡眠障碍、食欲改变、负罪感、注意力下降、动作迟缓/激越、自杀意念"
+    elif score >= 15:
+        return "明显的兴趣丧失、情绪低落、疲劳、睡眠或食欲问题、注意力下降"
+    elif score >= 10:
+        return "兴趣下降、心情郁闷、疲倦、部分睡眠或食欲改变"
+    else:
+        return "轻微情绪波动"
+
+
+def _panas_level(score: int, is_positive: bool) -> str:
+    """PANAS 情绪水平判断"""
+    if is_positive:
+        if score >= 35:
+            return "高水平"
+        elif score >= 25:
+            return "中等水平"
+        else:
+            return "低水平"
+    else:  # negative
+        if score >= 30:
+            return "高水平(需关注)"
+        elif score >= 20:
+            return "中等水平"
+        else:
+            return "低水平(良好)"
+
+
+def _ecr_attachment_type(anxiety: str, avoidance: str) -> str:
+    """ECR-36 依恋类型判断"""
+    if "低" in anxiety and "低" in avoidance:
+        return "安全型依恋 (Secure) - 能建立稳定亲密关系，信任他人，情感表达流畅"
+    elif "高" in anxiety and "低" in avoidance:
+        return "焦虑型依恋 (Anxious/Preoccupied) - 渴望亲密但担心被抛弃，需要频繁保证"
+    elif "低" in anxiety and "高" in avoidance:
+        return "回避型依恋 (Avoidant/Dismissing) - 不适亲密，强调独立，情感表达困难"
+    elif "高" in anxiety and "高" in avoidance:
+        return "恐惧型依恋 (Fearful-Avoidant) - 渴望但恐惧亲密，矛盾心理明显"
+    else:
+        return "中等水平，部分依恋模式特征"
+
+
+def _update_strength(db: Session, user_id: int, new_strength: str) -> str:
+    """追加优势信息，避免覆盖"""
+    existing_insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
+    current_strengths = existing_insight.strengths if existing_insight and existing_insight.strengths else ""
+    
+    if current_strengths and new_strength not in current_strengths:
+        return f"{current_strengths}; {new_strength}"
+    elif not current_strengths:
+        return new_strength
+    else:
+        return current_strengths
 
