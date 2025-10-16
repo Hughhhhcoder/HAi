@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '../pages/Login.vue'
+import LoginV2 from '../pages/LoginV2.vue'
 import Register from '../pages/Register.vue'
 import Home from '../pages/Home.vue'
 import AiRoles from '../pages/AiRoles.vue'
@@ -11,7 +12,8 @@ import ApiTest from '../pages/ApiTest.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
-  { path: '/login', component: Login },
+  { path: '/login', component: LoginV2 }, // 使用新的高级登录页面
+  { path: '/login-old', component: Login }, // 保留旧版本作为对比
   { path: '/register', component: Register },
   { path: '/home', component: Home },
   { path: '/ai/roles', component: AiRoles },
