@@ -8,10 +8,13 @@
 - 主要功能：
   - 用户注册/登录（bcrypt 哈希；当前为简化 Demo，未发放 JWT）。
   - **10 个专业心理健康 AI 角色**（人本主义、CBT、正念、积极心理学、EFT、创伤疗愈、青少年、职场、关系、存在主义）。
+  - **专业知识增强（RAG）**：所有 AI 具备 25+ 条真实心理学知识，回答基于专业理论。
   - **长期记忆系统**：AI 自动记住用户性格、困扰、目标等，对话越多越了解用户。
-  - **个性化对话**：每次回复基于用户画像（作息、测评、打卡、记忆）。
+  - **个性化对话**：每次回复基于「用户画像 + 专业知识 + 对话历史」三位一体。
+  - **AI 专业报告自动生成**：每次测评后自动生成 1000+ 字的临床级别专业评估报告（基于 DSM-5/ICD-11）。
+  - **测评结果实时同步画像**：测评完成后自动提取洞察更新用户画像，AI 对话实时感知用户最新状态。
   - AI 对话（角色选择、历史记录、清空会话），支持图片上传（最大 50MB）与消息内预览。
-  - **心理测评系统（10 个专业量表 - 完整版192题）**：PHQ-9、GAD-7、PSS-14、PANAS、ECR-36、IRI-28、RSES、SCS-26、MBI-22、PCL-5（20题），覆盖情绪、人际、自我认知、职场、创伤 5 大领域。所有量表均为国际标准完整版本，非简化版。
+  - **心理测评系统（10 个专业量表 - 完整版192题）**：PHQ-9(9)、GAD-7(7)、PSS-14(14)、PANAS(20)、ECR-36(36)、IRI-28(28)、RSES(10)、SCS-26(26)、MBI-22(22)、PCL-5(20)，覆盖情绪、人际、自我认知、职场、创伤 5 大领域。所有量表均为国际标准完整版本，非简化版。
   - 生活作息信息、恢复计划生成（mock）、每日打卡与积分。
 
 二、目录与服务简述
@@ -19,21 +22,32 @@
   - user：/user/register、/user/login
   - ai：/ai/roles（返回 10 个专业心理角色）、/ai/chat、/ai/history、/ai/clear、/ai/stream（SSE）。
   - upload：/upload/image 返回 {url, data_url}；/upload/audio 返回 {url}（无 data_url）。
-  - **psych（心理测评系统升级）**：
-    - /psych/categories：返回 5 大分类和 10 个量表列表
-    - /psych/questionnaire：获取指定量表（支持 10 种）
-    - /psych/submit：智能评分引擎，支持总分、平均分、分量表、反向计分 4 种方式
-    - /psych/history：查询历史测评
+  - **psych（心理测评系统 - 完整版192题 + AI报告）**：
+    - /psych/categories：返回 5 大分类和 10 个量表列表（完整版192题）
+    - /psych/questionnaire：获取指定量表（支持 10 种完整版量表）
+    - /psych/submit：提交测评，自动生成 AI 专业报告并更新用户画像
+    - /psych/history：查询历史测评（包含 AI 报告）
+    - /psych/report/{record_id}：获取单个测评的完整报告
   - plan、checkin、rewards：作息与计划、每日打卡、积分查询。
 - backend/app/services
   - user_service：注册/验证（bcrypt）。
-  - **memory_service（新增）**：
-    - 用户画像生成：整合作息、测评、打卡、记忆等多维度信息。
+  - **report_service（新增 2025-10-16）**：
+    - AI 报告生成：`generate_assessment_report()` 调用外部 AI API 生成专业报告
+    - 提示词构建：`_build_report_prompt()` 构建 500+ 字的专业提示词
+    - HTTP 调用封装：超时控制（60秒）、智能降级、错误处理
+  - **memory_service（增强）**：
+    - 用户画像生成：整合作息、**测评详情（等级+分量表）**、打卡、记忆等多维度信息。
     - 记忆管理：添加/查询用户记忆（personality, concern, goal, trigger 等类型）。
     - 洞察提取：从对话中自动识别关键信息并保存。
+    - **测评洞察提取**（新增）：`update_profile_with_psych_test()` 智能提取测评洞察并更新 user_insights
+  - **knowledge_service（新增 2025-10-14）**：
+    - 知识检索：`retrieve_knowledge_for_conversation()` 基于用户消息和角色检索相关知识
+    - 知识格式化：`format_knowledge_for_prompt()` 格式化知识注入 AI 提示词
+    - 使用日志：`log_knowledge_usage()` 记录知识使用情况
   - ai_service：
     - 对话保存/查询、Redis 上下文（chatctx:{user}:{role}）。
-    - **用户画像整合**：每次对话自动注入用户画像到 AI 提示词。
+    - **用户画像整合**：每次对话自动注入用户画像（含测评结果）到 AI 提示词。
+    - **专业知识整合**：自动检索并注入相关心理学知识到 AI 提示词。
     - **自动记忆提取**：对话后自动提取洞察更新用户记忆。
     - 外部大模型调用（OpenAI 风格），消息体支持 {type:text}/{type:image_url}；失败自动降级为文本包含图片链接。
     - SSE 流式生成器（call_external_chat_api_stream，前端支持但默认已回退到一次性渲染）。
@@ -42,7 +56,9 @@
   - **psych_questionnaires.py（新增）**：集中管理所有 10 个心理测评量表，包含题目、选项、评分规则、解释标准（500+ 行）。
   - init_db.py：初始化数据库表和加载 10 个专业角色。
 - backend/app/models
-  - **user_memory.py（新增）**：UserMemory（用户记忆）、UserInsight（用户洞察）数据模型。
+  - **user_memory.py（新增 2025-10-14）**：UserMemory（用户记忆）、UserInsight（用户洞察）数据模型。
+  - **psychology_knowledge.py（新增 2025-10-14）**：PsychologyKnowledge（心理学知识）、RoleKnowledgeMapping（角色知识关联）、KnowledgeUsageLog（知识使用日志）。
+  - **psych_test.py（增强 2025-10-16）**：新增 `ai_report` 字段（TEXT），存储 AI 生成的专业评估报告。
 - frontend
   - 统一 API 封装（/src/api/index.js），开发态走 /api 代理；容器生产由 Nginx 反代 /api、/static。
   - `aiApi.chat` 支持通过 `opts.extraFields` 传入 `image_data_url` 等扩展字段，避免页面层重写 body。
