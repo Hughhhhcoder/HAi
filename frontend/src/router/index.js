@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Login from '../pages/Login.vue'
-import LoginV2 from '../pages/LoginV2.vue'
+import LoginNew from '../pages/LoginNew.vue'
 import Register from '../pages/Register.vue'
 import Home from '../pages/Home.vue'
 import HomeV2 from '../pages/HomeV2.vue'
@@ -13,10 +12,9 @@ import ApiTest from '../pages/ApiTest.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
-  { path: '/login', component: LoginV2 }, // 使用新的高级登录页面
-  { path: '/login-old', component: Login }, // 保留旧版本作为对比
+  { path: '/login', component: LoginNew }, // 全新的高级登录页面（3D效果+流体背景）
   { path: '/register', component: Register },
-  { path: '/home', component: HomeV2 }, // 使用新的Dashboard风格主页
+  { path: '/home', component: HomeV2 },
   { path: '/home-old', component: Home }, // 保留旧版本
   { path: '/ai/roles', component: AiRoles },
   { path: '/psych/choose', component: PsychChoose },
