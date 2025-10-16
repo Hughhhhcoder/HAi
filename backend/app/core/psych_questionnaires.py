@@ -564,3 +564,116 @@ def get_test_categories():
         })
     return categories
 
+
+def calculate_score_and_suggestion(test_type: str, answers: list[int]):
+    """
+    统一的评分和建议生成引擎
+    支持：sum（总分）、average（平均分）、subscale（分量表）
+    
+    Returns:
+        (score, result_details): 主要分数和详细结果字典
+    """
+    if test_type not in QUESTIONNAIRES:
+        raise ValueError(f"不支持的测评类型: {test_type}")
+    
+    config = QUESTIONNAIRES[test_type]
+    scoring_type = config.get("scoring_type", "sum")
+    reverse_items = config.get("reverse_items", [])
+    
+    # 1. 处理反向计分
+    processed_answers = []
+    options = config["options"]
+    max_score = max([opt["score"] for opt in options])
+    min_score = min([opt["score"] for opt in options])
+    
+    for i, ans in enumerate(answers):
+        # 注意：reverse_items 是 1-based，需要转换为 0-based
+        if (i + 1) in reverse_items:
+            reversed_score = max_score + min_score - ans
+            processed_answers.append(reversed_score)
+        else:
+            processed_answers.append(ans)
+    
+    # 2. 根据评分类型计算
+    result_details = {}
+    main_score = 0
+    
+    if scoring_type == "sum":
+        # 简单求和
+        main_score = sum(processed_answers)
+        
+        # 查找等级和建议
+        for range_info in config["interpretation"]["ranges"]:
+            if range_info["min"] <= main_score <= range_info["max"]:
+                result_details["main_score"] = main_score
+                result_details["level"] = range_info["level"]
+                result_details["color"] = range_info["color"]
+                result_details["suggestion"] = range_info["advice"]
+                break
+    
+    elif scoring_type == "average":
+        # 平均分
+        main_score = round(sum(processed_answers) / len(processed_answers), 2)
+        
+        # 查找等级和建议
+        for range_info in config["interpretation"]["ranges"]:
+            if range_info["min"] <= main_score <= range_info["max"]:
+                result_details["main_score"] = main_score
+                result_details["level"] = range_info["level"]
+                result_details["color"] = range_info["color"]
+                result_details["suggestion"] = range_info["advice"]
+                break
+    
+    elif scoring_type == "subscale":
+        # 分量表计分
+        subscales = config["subscales"]
+        subscale_scores = {}
+        subscale_levels = {}
+        subscale_suggestions = {}
+        subscale_colors = {}
+        
+        for sub_key, sub_info in subscales.items():
+            sub_items = sub_info["items"]
+            sub_answers = [processed_answers[i] for i in sub_items]
+            sub_score = sum(sub_answers)
+            
+            subscale_scores[sub_info["name"]] = sub_score
+            
+            # 查找该分量表的等级
+            if sub_key in config["interpretation"]:
+                for range_info in config["interpretation"][sub_key]:
+                    if range_info["min"] <= sub_score <= range_info["max"]:
+                        subscale_levels[sub_info["name"]] = range_info["level"]
+                        subscale_colors[sub_info["name"]] = range_info["color"]
+                        subscale_suggestions[sub_info["name"]] = range_info["advice"]
+                        break
+        
+        # 主分数是所有分量表的总和
+        main_score = sum(subscale_scores.values())
+        
+        result_details["main_score"] = main_score
+        result_details["subscale_scores"] = subscale_scores
+        result_details["subscale_levels"] = subscale_levels
+        result_details["subscale_colors"] = subscale_colors
+        result_details["subscale_suggestions"] = subscale_suggestions
+        
+        # 综合等级（基于最严重的分量表）
+        colors_priority = {"red": 4, "orange": 3, "yellow": 2, "green": 1, "gray": 0}
+        worst_color = "green"
+        worst_priority = 0
+        
+        for color in subscale_colors.values():
+            priority = colors_priority.get(color, 0)
+            if priority > worst_priority:
+                worst_priority = priority
+                worst_color = color
+        
+        result_details["color"] = worst_color
+        result_details["level"] = "多维度评估，详见分量表"
+        result_details["suggestion"] = "\n\n".join([
+            f"【{name}】{level}：{subscale_suggestions[name]}"
+            for name, level in subscale_levels.items()
+        ])
+    
+    return main_score, result_details
+

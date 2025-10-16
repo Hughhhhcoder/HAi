@@ -214,6 +214,34 @@
           </div>
         </div>
 
+        <!-- AI 专业报告（新增） -->
+        <div v-if="testResult.ai_report" class="mb-6">
+          <div class="bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 rounded-2xl p-8 shadow-lg border-2 border-purple-100">
+            <div class="flex items-center mb-6">
+              <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mr-4">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-2xl font-bold text-gray-900">AI 专业评估报告</h3>
+                <p class="text-sm text-gray-600 mt-1">基于国际标准生成的深度分析</p>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-xl p-6 shadow-md prose prose-lg max-w-none">
+              <div class="markdown-content text-gray-800" v-html="renderMarkdown(testResult.ai_report)"></div>
+            </div>
+            
+            <div class="mt-4 flex items-center text-sm text-gray-600">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span>此报告由 AI 心理学家生成，仅供参考，不能替代专业诊断。如有需要，请寻求专业心理咨询。</span>
+            </div>
+          </div>
+        </div>
+
         <!-- 操作按钮 -->
         <div class="flex flex-col sm:flex-row gap-4">
           <button
@@ -480,6 +508,32 @@ const getTestTitle = (testType) => {
 const formatDate = (dateString) => {
   const date = new Date(dateString)
   return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+// 渲染 Markdown（简化版，使用正则替换）
+const renderMarkdown = (text) => {
+  if (!text) return ''
+  
+  let html = text
+  
+  // 标题
+  html = html.replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold mt-6 mb-3 text-gray-900">$1</h3>')
+  html = html.replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mt-8 mb-4 text-gray-900">$1</h2>')
+  html = html.replace(/^# (.*$)/gim, '<h1 class="text-3xl font-bold mt-10 mb-5 text-gray-900">$1</h1>')
+  
+  // 粗体和斜体
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
+  html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+  
+  // 无序列表
+  html = html.replace(/^\- (.*$)/gim, '<li class="ml-6 mb-2 list-disc">$1</li>')
+  html = html.replace(/(<li class="ml-6 mb-2 list-disc">.*<\/li>)/gim, '<ul class="my-4">$1</ul>')
+  
+  // 换行
+  html = html.replace(/\n\n/g, '</p><p class="mb-4">')
+  html = '<p class="mb-4">' + html + '</p>'
+  
+  return html
 }
 
 onMounted(() => {

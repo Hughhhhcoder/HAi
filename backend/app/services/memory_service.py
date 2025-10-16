@@ -25,18 +25,31 @@ def get_user_profile_summary(db: Session, user_id: int) -> str:
         if profile.preferences:
             parts.append(f"偏好：{profile.preferences}")
     
-    # 2. 最近的心理测评结果
+    # 2. 最近的心理测评结果（详细版，包含等级和维度）
     recent_tests = db.query(PsychTest)\
         .filter(PsychTest.user_id == user_id)\
         .order_by(PsychTest.date.desc())\
-        .limit(2)\
+        .limit(3)\
         .all()
     
     if recent_tests:
         test_summary = []
         for test in recent_tests:
-            test_summary.append(f"{test.test_type}={test.score}分")
-        parts.append(f"近期测评：{', '.join(test_summary)}")
+            # 解析 result_json 获取详细信息
+            try:
+                result = json.loads(test.result_json) if test.result_json else {}
+                level = result.get("level", "未知")
+                test_summary.append(f"{test.test_type}={level}({test.score}分)")
+                
+                # 如果有分量表，添加关键维度
+                if "subscale_levels" in result:
+                    subscales = result.get("subscale_levels", {})
+                    for sub_name, sub_level in list(subscales.items())[:2]:  # 最多显示2个维度
+                        test_summary.append(f"  └ {sub_name}={sub_level}")
+            except:
+                test_summary.append(f"{test.test_type}={test.score}分")
+        
+        parts.append(f"近期心理测评：\n" + "\n".join(test_summary))
     
     # 3. 最近打卡情况（反映状态）
     recent_checkins = db.query(DailyCheckin)\
@@ -225,4 +238,115 @@ def extract_insights_from_conversation(
                         content=sent.strip(),
                         importance=7
                     )
+
+
+def update_profile_with_psych_test(
+    db: Session,
+    user_id: int,
+    test_type: str,
+    score: int,
+    result: dict
+):
+    """
+    将心理测评结果整合到用户画像中
+    
+    Args:
+        db: 数据库会话
+        user_id: 用户ID
+        test_type: 测评类型
+        score: 得分
+        result: 测评结果字典（包含level, subscale_scores等）
+    """
+    level = result.get("level", "未知")
+    
+    # 根据测评类型和结果，提取关键洞察
+    insight_updates = {}
+    
+    # 1. 情绪与心境类 - 更新主要困扰
+    if test_type in ["PHQ9", "GAD7", "PSS14"]:
+        concern_map = {
+            "PHQ9": "抑郁",
+            "GAD7": "焦虑",
+            "PSS14": "压力"
+        }
+        concern_type = concern_map.get(test_type, "情绪")
+        
+        if level in ["中度", "中重度", "重度", "高压力"]:
+            # 更新主要困扰
+            existing_insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
+            current_concerns = existing_insight.main_concerns if existing_insight and existing_insight.main_concerns else ""
+            
+            if concern_type not in current_concerns:
+                new_concerns = f"{current_concerns}, {concern_type}({level})" if current_concerns else f"{concern_type}({level})"
+                insight_updates["main_concerns"] = new_concerns.strip(", ")
+    
+    # 2. 人际关系类 - 更新人际模式
+    if test_type == "ECR36":
+        subscale_levels = result.get("subscale_levels", {})
+        anxiety_level = subscale_levels.get("关系焦虑", "")
+        avoidance_level = subscale_levels.get("关系回避", "")
+        
+        if anxiety_level or avoidance_level:
+            coping_pattern = f"依恋风格: {anxiety_level}焦虑, {avoidance_level}回避"
+            insight_updates["coping_patterns"] = coping_pattern
+    
+    # 3. 自我认知类 - 更新核心特质
+    if test_type == "RSES":
+        if level in ["低自尊", "中等自尊"]:
+            insight_updates["core_traits"] = f"自尊水平: {level}"
+    
+    if test_type == "SCS26":
+        if level in ["低自我同情", "中等自我同情"]:
+            insight_updates["core_traits"] = f"自我同情: {level}"
+    
+    # 4. 职场倦怠 - 更新困扰
+    if test_type == "MBI22":
+        subscale_levels = result.get("subscale_levels", {})
+        exhaustion = subscale_levels.get("情绪耗竭", "")
+        
+        if "高" in exhaustion or "中等" in exhaustion:
+            existing_insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
+            current_concerns = existing_insight.main_concerns if existing_insight and existing_insight.main_concerns else ""
+            
+            if "职业倦怠" not in current_concerns:
+                new_concerns = f"{current_concerns}, 职业倦怠({exhaustion}耗竭)" if current_concerns else f"职业倦怠({exhaustion}耗竭)"
+                insight_updates["main_concerns"] = new_concerns.strip(", ")
+    
+    # 5. 创伤应激 - 更新触发因素
+    if test_type == "PCL5_20":
+        if level in ["中度PTSD症状", "重度PTSD症状"]:
+            insight_updates["triggers"] = f"存在创伤后应激症状({level})"
+    
+    # 提取积极方面 - 更新优势
+    strengths = []
+    if test_type == "PANAS":
+        subscale_scores = result.get("subscale_scores", {})
+        positive_score = subscale_scores.get("积极情绪", 0)
+        if positive_score >= 35:
+            strengths.append("积极情绪丰富")
+    
+    if test_type == "RSES" and level == "高自尊":
+        strengths.append("自尊感良好")
+    
+    if test_type == "IRI28":
+        subscale_levels = result.get("subscale_levels", {})
+        if "高" in subscale_levels.get("共情关注", ""):
+            strengths.append("共情能力强")
+        if "高" in subscale_levels.get("观点采择", ""):
+            strengths.append("善于理解他人")
+    
+    if strengths:
+        existing_insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
+        current_strengths = existing_insight.strengths if existing_insight and existing_insight.strengths else ""
+        new_strengths_text = ", ".join(strengths)
+        
+        if current_strengths:
+            insight_updates["strengths"] = f"{current_strengths}, {new_strengths_text}"
+        else:
+            insight_updates["strengths"] = new_strengths_text
+    
+    # 应用更新
+    if insight_updates:
+        update_user_insight(db, user_id, **insight_updates)
+        print(f"[INFO] 已更新用户 {user_id} 的画像: {insight_updates}")
 
