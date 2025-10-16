@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LoginNew from '../pages/LoginNew.vue'
 import Register from '../pages/Register.vue'
 import HomeNew from '../pages/HomeNew.vue'
-import AiRoles from '../pages/AiRoles.vue'
+import AiRolesNew from '../pages/AiRolesNew.vue'
 import PsychChoose from '../pages/PsychChoose.vue'
 import PlanProfile from '../pages/PlanProfile.vue'
 import CheckinDaily from '../pages/CheckinDaily.vue'
@@ -14,7 +14,7 @@ const routes = [
   { path: '/login', component: LoginNew }, // 全新的高级登录页面（3D效果+流体背景）
   { path: '/register', component: Register },
   { path: '/home', component: HomeNew }, // 全新的Dashboard主页（数据可视化+微交互）
-  { path: '/ai/roles', component: AiRoles },
+  { path: '/ai/roles', component: AiRolesNew }, // 全新的AI对话页面（现代聊天UI+打字效果）
   { path: '/psych/choose', component: PsychChoose },
   { path: '/plan/profile', component: PlanProfile },
   { path: '/checkin/daily', component: CheckinDaily },
