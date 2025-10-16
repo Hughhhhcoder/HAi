@@ -3,7 +3,7 @@ import LoginNew from '../pages/LoginNew.vue'
 import Register from '../pages/Register.vue'
 import HomeNew from '../pages/HomeNew.vue'
 import AiRolesNew from '../pages/AiRolesNew.vue'
-import PsychChoose from '../pages/PsychChoose.vue'
+import PsychChooseNew from '../pages/PsychChooseNew.vue'
 import PlanProfile from '../pages/PlanProfile.vue'
 import CheckinDaily from '../pages/CheckinDaily.vue'
 import RewardsPoints from '../pages/RewardsPoints.vue'
@@ -15,7 +15,7 @@ const routes = [
   { path: '/register', component: Register },
   { path: '/home', component: HomeNew }, // 全新的Dashboard主页（数据可视化+微交互）
   { path: '/ai/roles', component: AiRolesNew }, // 全新的AI对话页面（现代聊天UI+打字效果）
-  { path: '/psych/choose', component: PsychChoose },
+  { path: '/psych/choose', component: PsychChooseNew }, // 全新的心理测评页面（进度动画+结果可视化）
   { path: '/plan/profile', component: PlanProfile },
   { path: '/checkin/daily', component: CheckinDaily },
   { path: '/rewards/points', component: RewardsPoints },
