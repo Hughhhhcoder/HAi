@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.reward import Reward
 
-router = APIRouter(prefix="/rewards", tags=["rewards"])
+router = APIRouter(prefix="/api/rewards", tags=["rewards"])
 
 def get_db():
     db = SessionLocal()

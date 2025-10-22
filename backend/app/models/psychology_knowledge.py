@@ -35,8 +35,7 @@ class PsychologyKnowledge(Base):
     # 关联到多个角色（多对多）
     roles = relationship(
         "AIRole",
-        secondary=role_knowledge_association,
-        back_populates="knowledge_base"
+        secondary=role_knowledge_association
     )
     
     def __repr__(self):

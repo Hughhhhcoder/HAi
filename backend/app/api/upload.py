@@ -14,7 +14,7 @@ AUDIO_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '../../uploads/audio'
 AUDIO_UPLOAD_DIR = os.path.abspath(AUDIO_UPLOAD_DIR)
 os.makedirs(AUDIO_UPLOAD_DIR, exist_ok=True)
 
-router = APIRouter(prefix="/upload", tags=["upload"])
+router = APIRouter(prefix="/api/upload", tags=["upload"])
 
 @router.post("/image")
 def upload_image(file: UploadFile = File(...)):

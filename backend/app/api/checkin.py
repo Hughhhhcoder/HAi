@@ -3,9 +3,10 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.models.daily_checkin import DailyCheckin
 from app.models.reward import Reward
+from app.services.memory_service import update_profile_with_checkin
 from datetime import date
 
-router = APIRouter(prefix="/checkin", tags=["checkin"])
+router = APIRouter(prefix="/api/checkin", tags=["checkin"])
 
 def get_db():
     db = SessionLocal()
@@ -31,6 +32,7 @@ def daily_checkin(
     # 新增打卡
     record = DailyCheckin(user_id=user_id, date=today, mood=mood, sleep_hours=sleep_hours, completed_tasks=completed_tasks)
     db.add(record)
+    
     # 积分奖励
     reward = db.query(Reward).filter(Reward.user_id == user_id).first()
     if not reward:
@@ -38,6 +40,15 @@ def daily_checkin(
         db.add(reward)
     reward.points += 5  # 每日打卡+5分
     reward.reward_history = (reward.reward_history or "") + f"{today}:每日打卡+5分,"
+    
+    # 更新用户画像
+    checkin_data = {
+        'mood': mood,
+        'sleep_hours': sleep_hours,
+        'completed_tasks': completed_tasks
+    }
+    update_profile_with_checkin(db, user_id, checkin_data)
+    
     db.commit()
     return {"msg": "打卡成功，积分+5", "points": reward.points}
 

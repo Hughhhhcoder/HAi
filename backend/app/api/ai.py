@@ -12,7 +12,7 @@ from app.services.ai_service import (
 )
 from app.models.ai_role import AIRole
 
-router = APIRouter(prefix="/ai", tags=["ai"])
+router = APIRouter(prefix="/api/ai", tags=["ai"])
 
 def get_db():
     db = SessionLocal()

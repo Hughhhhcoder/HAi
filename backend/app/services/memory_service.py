@@ -7,6 +7,7 @@ from app.models.user_memory import UserMemory, UserInsight
 from app.models.user_profile import UserProfile
 from app.models.psych_test import PsychTest
 from app.models.daily_checkin import DailyCheckin
+from app.models.recovery_plan import RecoveryPlan
 import json
 from datetime import datetime, timedelta
 
@@ -51,7 +52,7 @@ def get_user_profile_summary(db: Session, user_id: int) -> str:
         
         parts.append(f"近期心理测评：\n" + "\n".join(test_summary))
     
-    # 3. 最近打卡情况（反映状态）
+    # 3. 最近打卡情况（详细分析）
     recent_checkins = db.query(DailyCheckin)\
         .filter(DailyCheckin.user_id == user_id)\
         .order_by(DailyCheckin.date.desc())\
@@ -59,11 +60,63 @@ def get_user_profile_summary(db: Session, user_id: int) -> str:
         .all()
     
     if recent_checkins:
+        # 心情分析
         moods = [c.mood for c in recent_checkins if c.mood]
         if moods:
-            parts.append(f"近期心情：{', '.join(moods[:3])}")
+            mood_counts = {}
+            for mood in moods:
+                mood_counts[mood] = mood_counts.get(mood, 0) + 1
+            dominant_mood = max(mood_counts, key=mood_counts.get)
+            parts.append(f"近期心情：{', '.join(moods[:3])}（主要：{dominant_mood}）")
+        
+        # 睡眠分析
+        sleep_hours = [c.sleep_hours for c in recent_checkins if c.sleep_hours is not None]
+        if sleep_hours:
+            avg_sleep = sum(sleep_hours) / len(sleep_hours)
+            if avg_sleep < 6:
+                sleep_status = "睡眠不足"
+            elif avg_sleep > 9:
+                sleep_status = "睡眠过多"
+            else:
+                sleep_status = "睡眠正常"
+            parts.append(f"睡眠状况：平均{avg_sleep:.1f}小时/天（{sleep_status}）")
+        
+        # 任务完成情况
+        tasks = [c.completed_tasks for c in recent_checkins if c.completed_tasks]
+        if tasks:
+            task_keywords = []
+            for task_str in tasks:
+                if task_str:
+                    task_keywords.extend(task_str.split(','))
+            # 统计高频任务关键词
+            task_counts = {}
+            for task in task_keywords:
+                task = task.strip()
+                if task:
+                    task_counts[task] = task_counts.get(task, 0) + 1
+            if task_counts:
+                top_tasks = sorted(task_counts.items(), key=lambda x: x[1], reverse=True)[:3]
+                task_summary = ', '.join([f"{task}({count}次)" for task, count in top_tasks])
+                parts.append(f"常完成任务：{task_summary}")
     
-    # 4. 深层洞察（如果有）
+    # 4. 生活计划/恢复计划分析
+    recovery_plans = db.query(RecoveryPlan)\
+        .filter(RecoveryPlan.user_id == user_id)\
+        .order_by(RecoveryPlan.created_at.desc())\
+        .limit(3)\
+        .all()
+    
+    if recovery_plans:
+        plan_summary = []
+        for plan in recovery_plans:
+            stage_info = f"（{plan.stage}）" if plan.stage else ""
+            # 提取计划的关键信息（前100个字符）
+            plan_preview = plan.plan_text[:100] + "..." if len(plan.plan_text) > 100 else plan.plan_text
+            plan_summary.append(f"{plan_preview}{stage_info}")
+        
+        parts.append("生活计划：\n" + "\n".join(plan_summary))
+    
+    # 5. 深层洞察（如果有）
     insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
     if insight:
         if insight.main_concerns:
@@ -73,7 +126,7 @@ def get_user_profile_summary(db: Session, user_id: int) -> str:
         if insight.triggers:
             parts.append(f"触发因素：{insight.triggers}")
     
-    # 5. 用户记忆（重要的个性化信息）
+    # 6. 用户记忆（重要的个性化信息）
     memories = db.query(UserMemory)\
         .filter(UserMemory.user_id == user_id)\
         .filter(UserMemory.importance >= 7)\
@@ -589,4 +642,184 @@ def _update_strength(db: Session, user_id: int, new_strength: str) -> str:
         return new_strength
     else:
         return current_strengths
+
+
+def update_profile_with_checkin(db: Session, user_id: int, checkin_data: dict):
+    """
+    根据每日打卡数据更新用户画像
+    """
+    insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
+    if not insight:
+        insight = UserInsight(user_id=user_id)
+        db.add(insight)
+    
+    updates = {}
+    
+    # 分析心情模式
+    if checkin_data.get('mood'):
+        mood = checkin_data['mood']
+        mood_insights = {
+            '开心': '用户表现出积极情绪，具有乐观的生活态度',
+            '平静': '用户情绪稳定，具有良好的情绪调节能力',
+            '焦虑': '用户可能面临压力，需要关注焦虑管理',
+            '沮丧': '用户可能遇到困难，需要情感支持',
+            '愤怒': '用户可能面临挫折，需要情绪疏导',
+            '疲惫': '用户可能过度劳累，需要休息调整'
+        }
+        
+        if mood in mood_insights:
+            mood_insight = mood_insights[mood]
+            if 'coping_patterns' not in updates:
+                updates['coping_patterns'] = insight.coping_patterns or ""
+            if mood_insight not in updates['coping_patterns']:
+                updates['coping_patterns'] = f"{updates['coping_patterns']}\n- {mood_insight}".strip()
+    
+    # 分析睡眠模式
+    if checkin_data.get('sleep_hours') is not None:
+        sleep_hours = checkin_data['sleep_hours']
+        if sleep_hours < 6:
+            sleep_insight = "睡眠不足，可能影响情绪和认知功能"
+        elif sleep_hours > 9:
+            sleep_insight = "睡眠过多，可能存在抑郁或疲劳问题"
+        else:
+            sleep_insight = "睡眠规律，有利于身心健康"
+        
+        if 'coping_patterns' not in updates:
+            updates['coping_patterns'] = insight.coping_patterns or ""
+        if sleep_insight not in updates['coping_patterns']:
+            updates['coping_patterns'] = f"{updates['coping_patterns']}\n- {sleep_insight}".strip()
+    
+    # 分析任务完成情况
+    if checkin_data.get('completed_tasks'):
+        tasks = checkin_data['completed_tasks']
+        if isinstance(tasks, str):
+            task_list = [t.strip() for t in tasks.split(',') if t.strip()]
+        else:
+            task_list = tasks
+        
+        if task_list:
+            # 分析任务类型
+            work_tasks = [t for t in task_list if any(keyword in t.lower() for keyword in ['工作', '项目', '会议', '报告', '任务'])]
+            health_tasks = [t for t in task_list if any(keyword in t.lower() for keyword in ['运动', '锻炼', '健身', '跑步', '瑜伽'])]
+            social_tasks = [t for t in task_list if any(keyword in t.lower() for keyword in ['朋友', '家人', '聚会', '聊天'])]
+            
+            if work_tasks:
+                work_insight = f"用户注重工作效率，完成工作相关任务：{', '.join(work_tasks[:2])}"
+                if 'strengths' not in updates:
+                    updates['strengths'] = insight.strengths or ""
+                if work_insight not in updates['strengths']:
+                    updates['strengths'] = f"{updates['strengths']}\n- {work_insight}".strip()
+            
+            if health_tasks:
+                health_insight = f"用户重视健康管理，坚持健康活动：{', '.join(health_tasks[:2])}"
+                if 'strengths' not in updates:
+                    updates['strengths'] = insight.strengths or ""
+                if health_insight not in updates['strengths']:
+                    updates['strengths'] = f"{updates['strengths']}\n- {health_insight}".strip()
+            
+            if social_tasks:
+                social_insight = f"用户重视人际关系，积极参与社交活动：{', '.join(social_tasks[:2])}"
+                if 'strengths' not in updates:
+                    updates['strengths'] = insight.strengths or ""
+                if social_insight not in updates['strengths']:
+                    updates['strengths'] = f"{updates['strengths']}\n- {social_insight}".strip()
+    
+    # 更新数据库
+    for field, value in updates.items():
+        setattr(insight, field, value)
+    
+    db.commit()
+    print(f"[INFO] 已更新用户 {user_id} 的打卡画像: {updates}")
+
+
+def update_profile_with_recovery_plan(db: Session, user_id: int, plan_data: dict):
+    """
+    根据生活计划/恢复计划更新用户画像
+    """
+    insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
+    if not insight:
+        insight = UserInsight(user_id=user_id)
+        db.add(insight)
+    
+    updates = {}
+    plan_text = plan_data.get('plan_text', '')
+    stage = plan_data.get('stage', '')
+    
+    # 分析计划内容，提取关键信息
+    if plan_text:
+        # 分析计划中的关键词
+        plan_lower = plan_text.lower()
+        
+        # 识别主要关注领域
+        concerns = []
+        if any(keyword in plan_lower for keyword in ['焦虑', '紧张', '担心', '恐惧']):
+            concerns.append('焦虑管理')
+        if any(keyword in plan_lower for keyword in ['抑郁', '低落', '悲伤', '绝望']):
+            concerns.append('情绪调节')
+        if any(keyword in plan_lower for keyword in ['压力', '负担', '累', '疲惫']):
+            concerns.append('压力管理')
+        if any(keyword in plan_lower for keyword in ['睡眠', '失眠', '作息']):
+            concerns.append('睡眠改善')
+        if any(keyword in plan_lower for keyword in ['社交', '朋友', '人际关系']):
+            concerns.append('社交技能')
+        
+        if concerns:
+            concern_text = f"用户关注的主要领域：{', '.join(concerns)}"
+            if 'main_concerns' not in updates:
+                updates['main_concerns'] = insight.main_concerns or ""
+            if concern_text not in updates['main_concerns']:
+                updates['main_concerns'] = f"{updates['main_concerns']}\n- {concern_text}".strip()
+        
+        # 识别应对策略
+        strategies = []
+        if any(keyword in plan_lower for keyword in ['冥想', '正念', '呼吸', '放松']):
+            strategies.append('正念练习')
+        if any(keyword in plan_lower for keyword in ['运动', '锻炼', '健身', '跑步']):
+            strategies.append('运动疗法')
+        if any(keyword in plan_lower for keyword in ['日记', '记录', '反思', '总结']):
+            strategies.append('自我反思')
+        if any(keyword in plan_lower for keyword in ['目标', '计划', '步骤', '阶段']):
+            strategies.append('目标设定')
+        if any(keyword in plan_lower for keyword in ['支持', '帮助', '咨询', '治疗']):
+            strategies.append('寻求支持')
+        
+        if strategies:
+            strategy_text = f"用户采用的应对策略：{', '.join(strategies)}"
+            if 'coping_patterns' not in updates:
+                updates['coping_patterns'] = insight.coping_patterns or ""
+            if strategy_text not in updates['coping_patterns']:
+                updates['coping_patterns'] = f"{updates['coping_patterns']}\n- {strategy_text}".strip()
+        
+        # 识别个人优势
+        strengths = []
+        if any(keyword in plan_lower for keyword in ['坚持', '持续', '努力', '积极']):
+            strengths.append('坚持性')
+        if any(keyword in plan_lower for keyword in ['学习', '成长', '进步', '改善']):
+            strengths.append('学习能力')
+        if any(keyword in plan_lower for keyword in ['自我', '独立', '自主', '负责']):
+            strengths.append('自我管理')
+        if any(keyword in plan_lower for keyword in ['乐观', '希望', '信心', '积极']):
+            strengths.append('乐观态度')
+        
+        if strengths:
+            strength_text = f"用户展现的个人优势：{', '.join(strengths)}"
+            if 'strengths' not in updates:
+                updates['strengths'] = insight.strengths or ""
+            if strength_text not in updates['strengths']:
+                updates['strengths'] = f"{updates['strengths']}\n- {strength_text}".strip()
+    
+    # 更新阶段信息
+    if stage:
+        stage_insight = f"当前恢复阶段：{stage}"
+        if 'core_traits' not in updates:
+            updates['core_traits'] = insight.core_traits or ""
+        if stage_insight not in updates['core_traits']:
+            updates['core_traits'] = f"{updates['core_traits']}\n- {stage_insight}".strip()
+    
+    # 更新数据库
+    for field, value in updates.items():
+        setattr(insight, field, value)
+    
+    db.commit()
+    print(f"[INFO] 已更新用户 {user_id} 的计划画像: {updates}")
 

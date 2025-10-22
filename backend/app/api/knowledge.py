@@ -10,7 +10,7 @@ from app.models.psychology_knowledge import PsychologyKnowledge, KnowledgeUsageL
 from app.services.knowledge_service import add_knowledge
 from typing import List
 
-router = APIRouter(prefix="/knowledge", tags=["Knowledge"])
+router = APIRouter(prefix="/api/knowledge", tags=["Knowledge"])
 
 
 @router.get("/list")

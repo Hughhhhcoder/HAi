@@ -1,25 +1,37 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginNew from '../pages/LoginNew.vue'
+import LoginFixed from '../pages/LoginFixed.vue'
 import Register from '../pages/Register.vue'
+import RegisterFixed from '../pages/RegisterFixed.vue'
 import HomeNew from '../pages/HomeNew.vue'
+import HomeFixed from '../pages/HomeFixed.vue'
 import AiRolesNew from '../pages/AiRolesNew.vue'
+import AiRolesFixed from '../pages/AiRolesFixed.vue'
 import PsychChooseNew from '../pages/PsychChooseNew.vue'
+import PsychChooseFixed from '../pages/PsychChooseFixed.vue'
 import PlanProfile from '../pages/PlanProfile.vue'
+import PlanProfileFixed from '../pages/PlanProfileFixed.vue'
 import CheckinDaily from '../pages/CheckinDaily.vue'
+import CheckinDailyFixed from '../pages/CheckinDailyFixed.vue'
 import RewardsPoints from '../pages/RewardsPoints.vue'
+import RewardsPointsFixed from '../pages/RewardsPointsFixed.vue'
 import ApiTest from '../pages/ApiTest.vue'
+import TestPage from '../pages/TestPage.vue'
+import LoginTest from '../pages/LoginTest.vue'
 
 const routes = [
   { path: '/', redirect: '/login' },
-  { path: '/login', component: LoginNew }, // 全新的高级登录页面（3D效果+流体背景）
-  { path: '/register', component: Register },
-  { path: '/home', component: HomeNew }, // 全新的Dashboard主页（数据可视化+微交互）
-  { path: '/ai/roles', component: AiRolesNew }, // 全新的AI对话页面（现代聊天UI+打字效果）
-  { path: '/psych/choose', component: PsychChooseNew }, // 全新的心理测评页面（进度动画+结果可视化）
-  { path: '/plan/profile', component: PlanProfile },
-  { path: '/checkin/daily', component: CheckinDaily },
-  { path: '/rewards/points', component: RewardsPoints },
+  { path: '/login', component: LoginFixed }, // 修复的登录页面（使用内联样式）
+  { path: '/register', component: RegisterFixed }, // 修复的注册页面（使用内联样式）
+  { path: '/home', component: HomeFixed }, // 修复的主页（使用内联样式）
+  { path: '/ai/roles', component: AiRolesFixed }, // 修复的AI对话页面（使用内联样式）
+  { path: '/psych/choose', component: PsychChooseFixed }, // 修复的心理测评页面（使用内联样式）
+  { path: '/plan/profile', component: PlanProfileFixed }, // 修复的生活计划页面（使用内联样式）
+  { path: '/checkin/daily', component: CheckinDailyFixed }, // 修复的每日打卡页面（使用内联样式）
+  { path: '/rewards/points', component: RewardsPointsFixed }, // 修复的积分页面（使用内联样式）
   { path: '/api-test', component: ApiTest },
+  { path: '/test', component: TestPage }, // 测试页面
+  { path: '/login-test', component: LoginTest }, // 登录测试页面
 ]
 
 const router = createRouter({

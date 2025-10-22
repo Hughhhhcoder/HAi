@@ -6,16 +6,16 @@
     </transition>
     <transition name="slide">
       <div v-if="open" class="fixed inset-y-0 left-0 z-50 w-64 md:hidden shadow-xl">
-        <Sidebar />
+        <SidebarFixed />
       </div>
     </transition>
 
     <!-- Desktop sidebar -->
-    <Sidebar class="hidden md:block" />
+    <SidebarFixed class="hidden md:block" />
 
     <!-- Main content -->
     <div class="flex-1 min-w-0 flex flex-col">
-      <Header @toggle="toggle" />
+      <HeaderFixed @toggle="toggle" />
       <main class="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6">
         <slot />
       </main>
@@ -26,9 +26,9 @@
 
 <script setup>
 import { ref } from 'vue'
-import Header from './Header.vue'
+import HeaderFixed from './HeaderFixed.vue'
 import Footer from './Footer.vue'
-import Sidebar from './Sidebar.vue'
+import SidebarFixed from './SidebarFixed.vue'
 const open = ref(false)
 function toggle() { open.value = !open.value }
 </script>

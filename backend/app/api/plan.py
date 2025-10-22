@@ -4,10 +4,11 @@ from app.core.database import SessionLocal
 from app.models.user_profile import UserProfile
 from app.models.recovery_plan import RecoveryPlan
 from app.models.psych_test import PsychTest
+from app.services.memory_service import update_profile_with_recovery_plan
 import json
 from datetime import datetime
 
-router = APIRouter(prefix="/plan", tags=["plan"])
+router = APIRouter(prefix="/api/plan", tags=["plan"])
 
 # 依赖
 def get_db():
@@ -67,6 +68,14 @@ def generate_plan(user_id: int = Form(...), db: Session = Depends(get_db)):
     plan_text = build_plan_text(profile, test, knowledge)
     plan = RecoveryPlan(user_id=user_id, plan_text=plan_text, stage="第一阶段")
     db.add(plan)
+    
+    # 更新用户画像
+    plan_data = {
+        'plan_text': plan_text,
+        'stage': "第一阶段"
+    }
+    update_profile_with_recovery_plan(db, user_id, plan_data)
+    
     db.commit()
     db.refresh(plan)
     return {"plan_id": plan.id, "plan_text": plan.plan_text, "stage": plan.stage}

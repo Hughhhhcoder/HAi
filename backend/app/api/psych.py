@@ -11,10 +11,11 @@ from app.models.psych_test import PsychTest
 from app.core.psych_questionnaires import QUESTIONNAIRES, get_test_categories, calculate_score_and_suggestion
 from app.services.report_service import generate_assessment_report
 from app.services.memory_service import update_profile_with_psych_test
+from app.models.user_memory import UserInsight
 import json
 from datetime import datetime
 
-router = APIRouter(prefix="/psych", tags=["psych"])
+router = APIRouter(prefix="/api/psych", tags=["psych"])
 
 
 # 获取所有测评分类和列表
@@ -147,4 +148,32 @@ def get_test_report(record_id: int, db: Session = Depends(get_db)):
         "date": record.date,
         "result_details": result_details,
         "ai_report": record.ai_report
+    }
+
+
+# 获取用户画像
+@router.get("/profile/{user_id}")
+def get_user_profile(user_id: int, db: Session = Depends(get_db)):
+    """获取用户心理画像，包含测评结果和AI洞察"""
+    insight = db.query(UserInsight).filter(UserInsight.user_id == user_id).first()
+    
+    if not insight:
+        return {
+            "user_id": user_id,
+            "main_concerns": "",
+            "strengths": "",
+            "coping_patterns": "",
+            "core_traits": "",
+            "triggers": "",
+            "summary": ""
+        }
+    
+    return {
+        "user_id": user_id,
+        "main_concerns": insight.main_concerns or "",
+        "strengths": insight.strengths or "",
+        "coping_patterns": insight.coping_patterns or "",
+        "core_traits": insight.core_traits or "",
+        "triggers": insight.triggers or "",
+        "summary": insight.summary or ""
     }
