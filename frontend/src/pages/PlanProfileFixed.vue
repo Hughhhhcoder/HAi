@@ -82,10 +82,33 @@
       <!-- 生成结果 -->
       <div v-if="generatedPlan" style="background: white; border-radius: 1rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); padding: 2rem; margin-bottom: 2rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-          <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937;">最新计划</h2>
-          <span style="font-size: 0.875rem; color: #9ca3af;">阶段：{{ generatedPlan.stage }}</span>
+          <h2 style="font-size: 1.25rem; font-weight: 600; color: #1f2937;">智能生成计划</h2>
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <span style="font-size: 0.875rem; color: #9ca3af;">{{ formatDate(new Date()) }}</span>
+            <span v-if="generatedPlan.priority_level" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.5rem; background: #fef3c7; color: #92400e;">
+              优先级：{{ generatedPlan.priority_level }}
+            </span>
+          </div>
         </div>
-        <pre style="white-space: pre-wrap; color: #1f2937; font-family: inherit; line-height: 1.6;">{{ generatedPlan.plan_text }}</pre>
+        
+        <!-- 重点关注领域 -->
+        <div v-if="generatedPlan.focus_areas && generatedPlan.focus_areas.length > 0" style="margin-bottom: 1rem; padding: 1rem; background: #f0f9ff; border-radius: 0.75rem; border: 1px solid #bae6fd;">
+          <h3 style="font-size: 0.875rem; font-weight: 600; color: #0369a1; margin-bottom: 0.5rem;">🎯 重点关注领域</h3>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            <span 
+              v-for="area in generatedPlan.focus_areas" 
+              :key="area"
+              style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: #dbeafe; color: #1e40af; border-radius: 0.375rem;"
+            >
+              {{ area }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- 计划内容 -->
+        <div style="background: #fafafa; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #e5e7eb;">
+          <pre style="white-space: pre-wrap; color: #1f2937; font-family: inherit; line-height: 1.6; margin: 0;">{{ generatedPlan.plan_text }}</pre>
+        </div>
       </div>
 
       <!-- 历史计划 -->
@@ -167,6 +190,13 @@ async function loadHistory() {
   } catch (e) {
     console.error('加载历史失败:', e)
   }
+}
+
+function formatDate(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 onMounted(async () => {

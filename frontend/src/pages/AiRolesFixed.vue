@@ -138,93 +138,52 @@ export default {
       messages: [],
       currentMessage: '',
       isAiTyping: false,
-      aiRoles: [
-        {
-          id: 1,
-          name: '认知行为咨询师',
-          emoji: '🧠',
-          description: '帮助您识别和改变消极思维模式，建立积极的认知方式',
-          tags: ['焦虑', '抑郁', '压力管理'],
-          gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-        },
-        {
-          id: 2,
-          name: '情绪管理专家',
-          emoji: '💝',
-          description: '引导您理解和管理情绪，提升情绪智力',
-          tags: ['情绪调节', '愤怒管理', '情感表达'],
-          gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-        },
-        {
-          id: 3,
-          name: '正念疗愈师',
-          emoji: '🧘',
-          description: '通过正念冥想帮助您活在当下，减少焦虑和压力',
-          tags: ['正念', '冥想', '放松'],
-          gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
-        },
-        {
-          id: 4,
-          name: '家庭关系顾问',
-          emoji: '👨‍👩‍👧‍👦',
-          description: '改善家庭沟通，化解家庭矛盾，促进和谐关系',
-          tags: ['亲子关系', '夫妻沟通', '家庭矛盾'],
-          gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
-        },
-        {
-          id: 5,
-          name: '职场心理教练',
-          emoji: '💼',
-          description: '应对职场压力，提升工作效能，实现职业发展',
-          tags: ['职场压力', '工作倦怠', '职业规划'],
-          gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
-        },
-        {
-          id: 6,
-          name: '青少年咨询师',
-          emoji: '🎓',
-          description: '专注青少年成长问题，帮助度过青春期困惑',
-          tags: ['学业压力', '人际关系', '自我认同'],
-          gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
-        },
-        {
-          id: 7,
-          name: '睡眠障碍专家',
-          emoji: '😴',
-          description: '改善睡眠质量，解决失眠和睡眠障碍问题',
-          tags: ['失眠', '睡眠质量', '作息调整'],
-          gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
-        },
-        {
-          id: 8,
-          name: '创伤疗愈师',
-          emoji: '🌱',
-          description: '帮助您从创伤经历中恢复，重建心理健康',
-          tags: ['创伤后应激', '心理创伤', '情感疗愈'],
-          gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
-        },
-        {
-          id: 9,
-          name: '人际关系导师',
-          emoji: '🤝',
-          description: '提升社交技能，改善人际关系，建立健康界限',
-          tags: ['社交焦虑', '人际冲突', '沟通技巧'],
-          gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
-        },
-        {
-          id: 10,
-          name: '自我成长导师',
-          emoji: '🌟',
-          description: '激发内在潜能，实现自我价值，追求个人成长',
-          tags: ['自我探索', '人生意义', '个人成长'],
-          gradient: 'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)'
-        }
-      ]
+      aiRoles: []
     }
   },
   methods: {
     goBack() {
       this.$router.push('/home')
+    },
+    async fetchRoles() {
+      try {
+        const res = await fetch('http://localhost:8000/api/ai/roles')
+        const data = await res.json()
+        this.aiRoles = (data || []).map((r, idx) => ({
+          id: r.id,
+          name: r.role_name || `AI 心理师 #${r.id}`,
+          emoji: this.pickEmoji(r.role_name),
+          description: (r.prompt_template || '').slice(0, 40) || '专业心理支持，提供个性化建议',
+          tags: [],
+          gradient: this.pickGradient(idx)
+        }))
+      } catch (e) {
+        // 回退到内置角色集合（保障页面可用）
+        this.aiRoles = [
+          { id: 1, name: '认知行为咨询师', emoji: '🧠', description: '帮助您识别和改变消极思维模式', tags: [], gradient: this.pickGradient(0) },
+          { id: 2, name: '情绪管理专家', emoji: '💝', description: '理解和管理情绪，提升情绪智力', tags: [], gradient: this.pickGradient(1) },
+          { id: 3, name: '正念疗愈师', emoji: '🧘', description: '通过正念冥想帮助您活在当下', tags: [], gradient: this.pickGradient(2) }
+        ]
+      }
+    },
+    pickGradient(i) {
+      const gs = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+      ]
+      return gs[i % gs.length]
+    },
+    pickEmoji(name = '') {
+      if (name && (name.includes('认知') || name.includes('CBT'))) return '🧠'
+      if (name && (name.includes('情绪') || name.includes('情感'))) return '💝'
+      if (name && (name.includes('正念') || name.includes('冥想'))) return '🧘'
+      if (name && name.includes('睡眠')) return '😴'
+      if (name && name.includes('关系')) return '🤝'
+      if (name && name.includes('成长')) return '🌟'
+      return '🧠'
     },
     selectRole(role) {
       this.selectedRole = role
@@ -257,13 +216,14 @@ export default {
 
       try {
         const userId = JSON.parse(localStorage.getItem('user')).id
-        const response = await fetch(`http://localhost:8000/api/ai/chat/${this.selectedRole.id}`, {
+        const response = await fetch(`http://localhost:8000/api/ai/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             user_id: userId,
+            role_id: this.selectedRole.id,
             message: messageToSend
           })
         })
@@ -316,16 +276,9 @@ export default {
         this.isAiTyping = false
       }
     },
-    clearChat() {
-      if (confirm('确定要清空聊天记录吗？')) {
-        this.messages = [
-          {
-            role: 'assistant',
-            content: `您好！我是${this.selectedRole.name}，很高兴为您服务。请随时告诉我您的困扰，我会尽力帮助您。`,
-            timestamp: new Date()
-          }
-        ]
-      }
+    async clearChat() {
+      this.messages = []
+      this.$nextTick(() => this.scrollToBottom())
     },
     formatTime(date) {
       const hours = date.getHours().toString().padStart(2, '0')
@@ -338,6 +291,9 @@ export default {
         messagesDiv.scrollTop = messagesDiv.scrollHeight
       }
     }
+  },
+  created() {
+    this.fetchRoles()
   }
 }
 </script>

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Form
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 import os
 from sqlalchemy.orm import Session
@@ -13,6 +14,14 @@ from app.services.ai_service import (
 from app.models.ai_role import AIRole
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
+
+class ChatRequest(BaseModel):
+    user_id: int
+    role_id: int
+    message: str = ""
+    image_url: Optional[str] = None
+    image_data_url: Optional[str] = None
+    audio_url: Optional[str] = None
 
 def get_db():
     db = SessionLocal()
@@ -33,12 +42,7 @@ def list_roles(
 
 @router.post("/chat")
 def chat(
-    user_id: int = Form(...),
-    role_id: int = Form(...),
-    message: str = Form(""),
-    image_url: str | None = Form(None),
-    image_data_url: str | None = Form(None),
-    audio_url: str | None = Form(None),
+    request: ChatRequest,
     db: Session = Depends(get_db)
 ):
     """与 AI 角色对话，支持图片和语音
@@ -48,7 +52,7 @@ def chat(
     - image_url: 图片URL（可选）
     - audio_url: 音频URL（可选）
     """
-    result = chat_with_ai(db, user_id, role_id, message, image_url, audio_url, image_data_url=image_data_url)
+    result = chat_with_ai(db, request.user_id, request.role_id, request.message, request.image_url, request.audio_url, image_data_url=request.image_data_url)
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result

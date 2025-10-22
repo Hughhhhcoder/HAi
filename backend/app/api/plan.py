@@ -5,6 +5,7 @@ from app.models.user_profile import UserProfile
 from app.models.recovery_plan import RecoveryPlan
 from app.models.psych_test import PsychTest
 from app.services.memory_service import update_profile_with_recovery_plan
+from app.services.plan_service import generate_smart_recovery_plan
 import json
 from datetime import datetime
 
@@ -53,32 +54,41 @@ def get_profile(user_id: int, db: Session = Depends(get_db)):
         "preferences": profile.preferences
     }
 
-# 生成生活恢复计划（mock智能）
+# 生成智能生活恢复计划
 @router.post("/generate")
 def generate_plan(user_id: int = Form(...), db: Session = Depends(get_db)):
-    # 获取作息
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-    if not profile:
-        raise HTTPException(status_code=400, detail="请先录入作息信息")
-    # 获取最近一次测评
-    test = db.query(PsychTest).filter(PsychTest.user_id == user_id).order_by(PsychTest.date.desc()).first()
-    # mock知识库检索
-    knowledge = "保持规律作息、适度运动、均衡饮食、关注心理健康。"
-    # 生成计划文本
-    plan_text = build_plan_text(profile, test, knowledge)
-    plan = RecoveryPlan(user_id=user_id, plan_text=plan_text, stage="第一阶段")
-    db.add(plan)
-    
-    # 更新用户画像
-    plan_data = {
-        'plan_text': plan_text,
-        'stage': "第一阶段"
-    }
-    update_profile_with_recovery_plan(db, user_id, plan_data)
-    
-    db.commit()
-    db.refresh(plan)
-    return {"plan_id": plan.id, "plan_text": plan.plan_text, "stage": plan.stage}
+    try:
+        # 使用新的智能计划生成服务
+        plan_data = generate_smart_recovery_plan(db, user_id)
+        
+        # 创建计划记录
+        plan = RecoveryPlan(
+            user_id=user_id, 
+            plan_text=plan_data["plan_text"], 
+            stage=plan_data["stage"]
+        )
+        db.add(plan)
+        
+        # 更新用户画像
+        update_profile_with_recovery_plan(db, user_id, {
+            'plan_text': plan_data["plan_text"],
+            'stage': plan_data["stage"]
+        })
+        
+        db.commit()
+        db.refresh(plan)
+        
+        return {
+            "plan_id": plan.id, 
+            "plan_text": plan.plan_text, 
+            "stage": plan.stage,
+            "focus_areas": plan_data.get("focus_areas", []),
+            "priority_level": plan_data.get("priority_level", "中等")
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"生成计划失败：{str(e)}")
 
 # 查询历史计划
 @router.get("/history")
