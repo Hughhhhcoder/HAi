@@ -554,6 +554,30 @@ export default {
     closeConsultationModal() {
       this.showConsultationModal = false
     },
+    formatTimestamp(timestamp) {
+      if (!timestamp) return '暂无'
+      
+      const now = new Date()
+      const date = new Date(timestamp)
+      const diffTime = Math.abs(now - date)
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      
+      if (diffDays === 1) {
+        return '今天'
+      } else if (diffDays === 2) {
+        return '昨天'
+      } else if (diffDays <= 7) {
+        return `${diffDays - 1}天前`
+      } else {
+        return date.toLocaleDateString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      }
+    },
     async loadLastConsultation() {
       try {
         const userStr = localStorage.getItem('user')
