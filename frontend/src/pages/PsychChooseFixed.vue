@@ -231,7 +231,7 @@
             <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
               <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                 <span style="font-size: 0.75rem; color: #9ca3af;">
-                  📅 测评时间：{{ formatTimestamp(testResult.created_at) }}
+                  📅 测评时间：{{ formatTimestamp(testResult.date) }}
                 </span>
                 <span v-if="testResult.updated_at" style="font-size: 0.75rem; color: #9ca3af;">
                   🔄 更新时间：{{ formatTimestamp(testResult.updated_at) }}
@@ -333,7 +333,7 @@
         <div style="max-height: 400px; overflow-y: auto; padding: 1rem;">
           <div v-for="(record, index) in testHistoryRecords" :key="index" style="padding: 1rem; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;" @mouseenter="e => e.target.style.background = '#f8fafc'" @mouseleave="e => e.target.style.background = 'white'">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-size: 0.75rem; color: #9ca3af;">{{ formatTimestamp(record.created_at) }}</span>
+              <span style="font-size: 0.75rem; color: #9ca3af;">{{ formatTimestamp(record.date) }}</span>
               <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.375rem; background: #e5e7eb; color: #374151;">{{ record.test_type }}</span>
             </div>
             <div style="margin-top: 0.5rem;">
@@ -702,7 +702,7 @@ const showTestHistory = async () => {
     testHistoryRecords.value = data || []
     testHistoryStats.value = {
       totalTests: data.length,
-      lastTestTime: data.length > 0 ? formatTimestamp(data[0].created_at) : '暂无'
+      lastTestTime: data.length > 0 ? formatTimestamp(data[0].date) : '暂无'
     }
     showHistoryModal.value = true
   } catch (error) {
