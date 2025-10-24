@@ -281,7 +281,7 @@ export default {
     },
     async fetchRoles() {
       try {
-        const res = await fetch('http://localhost:8000/api/ai/roles')
+        const res = await fetch('/api/ai/roles')
         const data = await res.json()
         this.aiRoles = (data || []).map((r, idx) => ({
           id: r.id,
@@ -382,7 +382,7 @@ export default {
         const userId = user.id || user.user_id || 1  // 容错处理
         console.log('Sending chat request:', { user_id: userId, role_id: this.selectedRole.id, message: messageToSend })
         
-        const response = await fetch(`http://localhost:8000/api/ai/chat`, {
+        const response = await fetch(`/api/ai/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -434,7 +434,7 @@ export default {
       
       try {
         const userId = JSON.parse(localStorage.getItem('user')).id
-        const response = await fetch(`http://localhost:8000/api/ai/full-history?user_id=${userId}&role_id=${this.selectedRole.id}`)
+        const response = await fetch(`/api/ai/full-history?user_id=${userId}&role_id=${this.selectedRole.id}`)
         if (!response.ok) throw new Error('Failed to load history')
         
         const data = await response.json()
@@ -465,7 +465,7 @@ export default {
         // 获取所有AI角色的对话历史
         for (const role of this.aiRoles) {
           try {
-            const response = await fetch(`http://localhost:8000/api/ai/full-history?user_id=${userId}&role_id=${role.id}`)
+            const response = await fetch(`/api/ai/full-history?user_id=${userId}&role_id=${role.id}`)
             if (response.ok) {
               const data = await response.json()
               if (data.conversations && data.conversations.length > 0) {

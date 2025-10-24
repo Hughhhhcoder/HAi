@@ -512,7 +512,7 @@ const startTest = async (test) => {
   
   // 从后端获取测试题目
   try {
-    const response = await fetch(`http://localhost:8000/api/psych/questionnaire?test_type=${test.id}`)
+    const response = await fetch(`/api/psych/questionnaire?test_type=${test.id}`)
     const data = await response.json()
     if (data.questions) {
       // 直接使用后端返回的数据格式
@@ -569,7 +569,7 @@ const submitTest = async () => {
   })
   
   try {
-    const response = await fetch('http://localhost:8000/api/psych/submit', {
+    const response = await fetch('/api/psych/submit', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -671,7 +671,7 @@ const showTestHistory = async () => {
   if (!userId) return
   
   try {
-    const response = await fetch(`http://localhost:8000/api/psych/history?user_id=${userId}`)
+    const response = await fetch(`/api/psych/history?user_id=${userId}`)
     if (!response.ok) throw new Error('Failed to load test history')
     
     const data = await response.json()

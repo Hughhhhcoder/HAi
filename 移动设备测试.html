@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移动设备登录测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-bottom: 20px;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .test-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .network-info {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            font-size: 12px;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <div class="logo-icon">💚</div>
+            <h1>移动设备测试</h1>
+            <p class="subtitle">局域网登录功能验证</p>
+        </div>
+        
+        <div class="test-info">
+            <strong>测试说明：</strong><br>
+            1. 确保设备连接同一Wi-Fi<br>
+            2. 使用测试账号登录<br>
+            3. 验证API调用是否正常
+        </div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" value="admin" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" value="admin123" required>
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">
+                测试登录
+            </button>
+        </form>
+        
+        <div id="result" class="result"></div>
+        
+        <div class="network-info">
+            <strong>网络信息：</strong><br>
+            当前URL: <span id="currentUrl"></span><br>
+            用户代理: <span id="userAgent"></span><br>
+            在线状态: <span id="onlineStatus"></span>
+        </div>
+    </div>
+
+    <script>
+        // 显示网络信息
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('userAgent').textContent = navigator.userAgent.substring(0, 50) + '...';
+        document.getElementById('onlineStatus').textContent = navigator.onLine ? '在线' : '离线';
+        
+        // 登录表单处理
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const resultDiv = document.getElementById('result');
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+            resultDiv.style.display = 'none';
+            
+            try {
+                // 测试API调用
+                const response = await fetch('/api/user/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.user_id) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ 登录成功！</strong><br>
+                        用户ID: ${data.user_id}<br>
+                        消息: ${data.msg || '登录成功'}<br>
+                        <br>
+                        <strong>🎉 局域网访问修复成功！</strong><br>
+                        现在可以在移动设备上正常使用所有功能了。
+                    `;
+                    resultDiv.style.display = 'block';
+                } else {
+                    throw new Error('登录响应格式错误');
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <strong>❌ 登录失败</strong><br>
+                    错误信息: ${error.message}<br>
+                    <br>
+                    <strong>可能的原因：</strong><br>
+                    1. 网络连接问题<br>
+                    2. 后端服务未启动<br>
+                    3. API路径配置错误<br>
+                    <br>
+                    <strong>解决方案：</strong><br>
+                    1. 检查网络连接<br>
+                    2. 确认后端服务运行正常<br>
+                    3. 联系技术支持
+                `;
+                resultDiv.style.display = 'block';
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = '测试登录';
+            }
+        });
+        
+        // 页面加载时显示连接状态
+        window.addEventListener('load', function() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = `
+                <strong>📱 移动设备检测</strong><br>
+                设备类型: ${/Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? '移动设备' : '桌面设备'}<br>
+                屏幕尺寸: ${window.innerWidth} x ${window.innerHeight}<br>
+                网络状态: ${navigator.onLine ? '已连接' : '未连接'}<br>
+                <br>
+                请点击"测试登录"按钮验证功能。
+            `;
+            resultDiv.style.display = 'block';
+        });
+    </script>
+</body>
+</html>
