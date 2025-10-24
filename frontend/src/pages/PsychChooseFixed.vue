@@ -253,7 +253,15 @@
           </div>
 
           <!-- 操作按钮 -->
-          <div style="display: flex; justify-content: center; gap: 1rem;">
+          <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <button 
+              @click="showTestHistory"
+              style="padding: 0.75rem 1.5rem; background: #10b981; color: white; border-radius: 0.75rem; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s;"
+              @mouseenter="e => e.target.style.background = '#059669'"
+              @mouseleave="e => e.target.style.background = '#10b981'"
+            >
+              📊 测评记录
+            </button>
             <button 
               @click="startNewTest"
               style="padding: 0.75rem 1.5rem; background: #8b5cf6; color: white; border-radius: 0.75rem; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s;"
@@ -274,6 +282,43 @@
         </div>
       </div>
     </div>
+
+    <!-- 测评记录弹窗 -->
+    <div v-if="showHistoryModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;" @click="closeHistoryModal">
+      <div style="background: white; border-radius: 1rem; width: 90%; max-width: 800px; max-height: 80vh; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);" @click.stop>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.5rem; border-bottom: 1px solid #e5e7eb; background: linear-gradient(135deg, #10b981, #059669); color: white;">
+          <h3 style="font-size: 1.25rem; font-weight: 600; margin: 0;">📊 心理测评记录</h3>
+          <button @click="closeHistoryModal" style="background: rgba(255, 255, 255, 0.2); border: none; border-radius: 0.5rem; padding: 0.5rem; cursor: pointer; transition: background 0.2s;" @mouseenter="e => e.target.style.background = 'rgba(255, 255, 255, 0.3)'">
+            <svg style="width: 1.25rem; height: 1.25rem; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <div style="display: flex; gap: 2rem; padding: 1.5rem; background: #f8fafc; border-bottom: 1px solid #e5e7eb;">
+          <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <span style="font-size: 0.875rem; color: #6b7280;">总测评数</span>
+            <span style="font-size: 1.125rem; font-weight: 600; color: #1f2937;">{{ testHistoryStats.totalTests }}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <span style="font-size: 0.875rem; color: #6b7280;">最近测评</span>
+            <span style="font-size: 1.125rem; font-weight: 600; color: #1f2937;">{{ testHistoryStats.lastTestTime }}</span>
+          </div>
+        </div>
+
+        <div style="max-height: 400px; overflow-y: auto; padding: 1rem;">
+          <div v-for="(record, index) in testHistoryRecords" :key="index" style="padding: 1rem; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;" @mouseenter="e => e.target.style.background = '#f8fafc'" @mouseleave="e => e.target.style.background = 'white'">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.75rem; color: #9ca3af;">{{ formatTimestamp(record.created_at) }}</span>
+              <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.375rem; background: #e5e7eb; color: #374151;">{{ record.test_type }}</span>
+            </div>
+            <div style="margin-top: 0.5rem;">
+              <p style="font-size: 0.875rem; color: #374151; line-height: 1.5; margin: 0;">分数：{{ record.score }} | 等级：{{ record.result_details?.level || 'N/A' }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -290,6 +335,12 @@ const selectedOption = ref(null)
 const answers = ref([])
 const testResult = ref(null)
 const isSubmitting = ref(false)
+const showHistoryModal = ref(false)
+const testHistoryRecords = ref([])
+const testHistoryStats = ref({
+  totalTests: 0,
+  lastTestTime: '暂无'
+})
 
 const categories = [
   { id: 'all', name: '全部' },
@@ -614,6 +665,30 @@ const formatTimestamp = (timestamp) => {
     console.error('时间格式化错误:', error)
     return '时间格式错误'
   }
+}
+
+const showTestHistory = async () => {
+  if (!userId) return
+  
+  try {
+    const response = await fetch(`http://localhost:8000/api/psych/history?user_id=${userId}`)
+    if (!response.ok) throw new Error('Failed to load test history')
+    
+    const data = await response.json()
+    testHistoryRecords.value = data || []
+    testHistoryStats.value = {
+      totalTests: data.length,
+      lastTestTime: data.length > 0 ? formatTimestamp(data[0].created_at) : '暂无'
+    }
+    showHistoryModal.value = true
+  } catch (error) {
+    console.error('Error loading test history:', error)
+    alert('加载测评记录失败')
+  }
+}
+
+const closeHistoryModal = () => {
+  showHistoryModal.value = false
 }
 
 onMounted(() => {

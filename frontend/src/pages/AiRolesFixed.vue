@@ -60,11 +60,19 @@
               <p class="chat-role-status">在线 · 随时为您服务</p>
             </div>
           </div>
-          <button @click="clearChat" class="clear-chat-btn">
-            <svg class="clear-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-            </svg>
-          </button>
+          <div class="chat-actions">
+            <button @click="showHistory" class="history-btn">
+              <svg class="history-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              历史记录
+            </button>
+            <button @click="clearChat" class="clear-chat-btn">
+              <svg class="clear-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <!-- 聊天消息区 -->
@@ -126,6 +134,47 @@
         </div>
       </div>
     </div>
+
+    <!-- 历史记录弹窗 -->
+    <div v-if="showHistoryModal" class="history-modal" @click="closeHistoryModal">
+      <div class="history-modal-content" @click.stop>
+        <div class="history-header">
+          <h3 class="history-title">对话历史记录</h3>
+          <button @click="closeHistoryModal" class="close-btn">
+            <svg class="close-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="history-stats">
+          <div class="stat-item">
+            <span class="stat-label">总对话数</span>
+            <span class="stat-value">{{ historyStats.totalMessages }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">最近对话</span>
+            <span class="stat-value">{{ historyStats.lastMessageTime }}</span>
+          </div>
+        </div>
+
+        <div class="history-list">
+          <div 
+            v-for="(record, index) in historyRecords" 
+            :key="index"
+            class="history-item"
+          >
+            <div class="history-item-header">
+              <span class="history-time">{{ formatTimestamp(record.timestamp) }}</span>
+              <span class="history-type">{{ record.is_user ? '您' : selectedRole.name }}</span>
+            </div>
+            <div class="history-content">
+              <p class="history-message">{{ record.message.substring(0, 100) }}{{ record.message.length > 100 ? '...' : '' }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -140,7 +189,13 @@ export default {
       messages: [],
       currentMessage: '',
       isAiTyping: false,
-      aiRoles: []
+      aiRoles: [],
+      showHistoryModal: false,
+      historyRecords: [],
+      historyStats: {
+        totalMessages: 0,
+        lastMessageTime: '暂无'
+      }
     }
   },
   methods: {
@@ -296,6 +351,30 @@ export default {
     async clearChat() {
       this.messages = []
       this.$nextTick(() => this.scrollToBottom())
+    },
+    async showHistory() {
+      if (!this.selectedRole) return
+      
+      try {
+        const userId = JSON.parse(localStorage.getItem('user')).id
+        const response = await fetch(`http://localhost:8000/api/ai/full-history?user_id=${userId}&role_id=${this.selectedRole.id}`)
+        if (!response.ok) throw new Error('Failed to load history')
+        
+        const data = await response.json()
+        this.historyRecords = data.conversations || []
+        this.historyStats = {
+          totalMessages: data.total_messages || 0,
+          lastMessageTime: this.historyRecords.length > 0 ? 
+            this.formatTimestamp(this.historyRecords[0].timestamp) : '暂无'
+        }
+        this.showHistoryModal = true
+      } catch (error) {
+        console.error('Error loading history:', error)
+        alert('加载历史记录失败')
+      }
+    },
+    closeHistoryModal() {
+      this.showHistoryModal = false
     },
     formatTime(date) {
       const hours = date.getHours().toString().padStart(2, '0')
@@ -882,5 +961,189 @@ export default {
 /* 列表项之间的间距 */
 :deep(.message-text li + li) {
   margin-top: 0.125rem;
+}
+
+/* 历史记录弹窗样式 */
+.history-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.history-modal-content {
+  background: white;
+  border-radius: 1rem;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  color: white;
+}
+
+.history-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.close-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: white;
+}
+
+.history-stats {
+  display: flex;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.stat-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.history-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.history-item {
+  padding: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.2s;
+}
+
+.history-item:hover {
+  background: #f8fafc;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.history-time {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.history-type {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.history-content {
+  margin-top: 0.5rem;
+}
+
+.history-message {
+  font-size: 0.875rem;
+  color: #374151;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 聊天操作按钮样式 */
+.chat-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.history-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.history-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.history-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.clear-chat-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clear-chat-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.clear-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: white;
 }
 </style>
