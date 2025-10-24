@@ -76,23 +76,53 @@ def get_conversation_history(db: Session, user_id: int, role_id: int, limit: int
         .limit(limit)\
         .all()
 
-def mock_ai_reply(role_name: str, user_msg: str) -> str:
-    """生成 mock AI 回复"""
+def mock_ai_reply(role_name: str, user_msg: str, context: list = None, user_profile: str = "") -> str:
+    """生成 mock AI 回复，支持长期记忆"""
     # 获取角色对应的回复模板
     replies = MOCK_REPLIES.get(role_name, MOCK_REPLIES["温柔心理师"])
     
     # 随机选择一个回复模板
     base_reply = random.choice(replies)
     
+    # 构建记忆感知的回复
+    memory_context = ""
+    if context and len(context) > 0:
+        # 分析对话历史，寻找相关话题
+        recent_topics = []
+        for msg in context[-5:]:  # 只看最近5条消息
+            if "USER:" in msg:
+                content = msg.replace("USER:", "").strip()
+                if "难过" in content or "伤心" in content:
+                    recent_topics.append("情绪低落")
+                elif "焦虑" in content or "压力" in content:
+                    recent_topics.append("焦虑压力")
+                elif "开心" in content or "高兴" in content:
+                    recent_topics.append("积极情绪")
+                elif "睡眠" in content or "作息" in content:
+                    recent_topics.append("睡眠问题")
+        
+        if recent_topics:
+            memory_context = f" 我注意到我们之前聊过{', '.join(set(recent_topics))}，"
+    
+    # 根据用户画像调整回复
+    profile_context = ""
+    if user_profile:
+        if "作息" in user_profile:
+            profile_context = " 根据你的作息情况，"
+        elif "心理测评" in user_profile:
+            profile_context = " 结合你之前的测评结果，"
+    
     # 根据用户输入适当调整回复
     if "难过" in user_msg or "伤心" in user_msg:
-        return f"{base_reply} 我注意到你现在心情不太好，让我们先聊聊是什么让你感到难过..."
+        return f"{base_reply}{memory_context}{profile_context}我注意到你现在心情不太好，让我们先聊聊是什么让你感到难过..."
     elif "焦虑" in user_msg or "压力" in user_msg:
-        return f"{base_reply} 压力和焦虑是很常见的，我们可以一起学习一些减压的方法..."
+        return f"{base_reply}{memory_context}{profile_context}压力和焦虑是很常见的，我们可以一起学习一些减压的方法..."
     elif "开心" in user_msg or "高兴" in user_msg:
-        return f"{base_reply} 很高兴听到你有这样的好心情！让我们想想如何保持这种状态..."
+        return f"{base_reply}{memory_context}{profile_context}很高兴听到你有这样的好心情！让我们想想如何保持这种状态..."
+    elif "睡眠" in user_msg or "作息" in user_msg:
+        return f"{base_reply}{memory_context}{profile_context}关于睡眠和作息，我建议我们制定一个适合你的计划..."
     else:
-        return base_reply
+        return f"{base_reply}{memory_context}{profile_context}让我们继续深入探讨这个话题..."
 
 def chat_with_ai(db: Session, user_id: int, role_id: int, user_msg: str, image_url: str = None, audio_url: str = None, image_data_url: str | None = None):
     """
@@ -114,7 +144,24 @@ def chat_with_ai(db: Session, user_id: int, role_id: int, user_msg: str, image_u
     # 选择生成策略：外部 API 或 mock
     use_external = os.getenv("AI_USE_EXTERNAL", "false").lower() in ["1", "true", "yes"]
     if use_external:
-        context = get_chat_context(user_id, role_id, max_length=10)
+        # 获取长期对话历史（从数据库）
+        long_term_context = get_conversation_history(db, user_id, role_id, limit=20)
+        # 获取短期上下文（从Redis，用于最近对话）
+        short_term_context = get_chat_context(user_id, role_id, max_length=5)
+        
+        # 合并长期和短期上下文
+        context = []
+        if long_term_context:
+            # 将数据库中的对话历史转换为字符串格式
+            for conv in long_term_context[-15:]:  # 取最近15条长期记忆
+                role_prefix = "USER" if conv.is_user else "ASSISTANT"
+                context.append(f"{role_prefix}: {conv.message}")
+        
+        # 添加短期上下文（避免重复）
+        for short_msg in short_term_context:
+            if short_msg not in context:
+                context.append(short_msg)
+        
         # 获取用户画像（让 AI 了解用户）
         user_profile = get_user_profile_summary(db, user_id)
         
@@ -168,7 +215,18 @@ def chat_with_ai(db: Session, user_id: int, role_id: int, user_msg: str, image_u
                 knowledge_ids = [k.id for k in relevant_knowledge]
                 log_knowledge_usage(db, last_conv.id, knowledge_ids, user_id, role_id)
     else:
-        ai_reply = mock_ai_reply(role.role_name, user_msg)
+        # Mock模式也使用长期记忆
+        long_term_context = get_conversation_history(db, user_id, role_id, limit=20)
+        context = []
+        if long_term_context:
+            for conv in long_term_context[-10:]:  # 取最近10条长期记忆
+                role_prefix = "USER" if conv.is_user else "ASSISTANT"
+                context.append(f"{role_prefix}: {conv.message}")
+        
+        # 获取用户画像
+        user_profile = get_user_profile_summary(db, user_id)
+        
+        ai_reply = mock_ai_reply(role.role_name, user_msg, context, user_profile)
 
     if image_url:
         ai_reply += "\n（我看到了你发的图片，若你愿意，可以描述它带给你的感受。）"
@@ -232,12 +290,24 @@ def _build_messages_from_context(role: AIRole, context: list[str], user_msg: str
         # 构建对话历史字符串
         context_str = "\n".join(context) if context else "（无对话历史）"
         
+        # 增强系统提示词，强调长期记忆的重要性
+        memory_instruction = """
+【重要】你具备长期记忆能力，能够记住与用户的所有历史对话。请：
+1. 主动引用之前讨论过的话题和用户提到的重要信息
+2. 基于对话历史提供连贯、个性化的建议
+3. 如果用户提到之前聊过的内容，要表现出你记得
+4. 结合用户的长期画像和近期对话，提供更有针对性的帮助
+"""
+        
         # 将用户画像、上下文、用户消息注入模板
         system_prompt = role.prompt_template.format(
             user_profile=user_profile or "（暂无用户画像信息）",
             context=context_str,
             user_msg="{placeholder}"  # 占位符，实际消息在 user message 中
         )
+        
+        # 在系统提示词后添加记忆指令
+        system_prompt = system_prompt + memory_instruction
         # 移除占位符
         system_prompt = system_prompt.replace("{placeholder}", "")
         

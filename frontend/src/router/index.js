@@ -25,7 +25,7 @@ const routes = [
   { path: '/register', component: RegisterFixed }, // 修复的注册页面（使用内联样式）
   { path: '/home', component: HomeFixed }, // 修复的主页（使用内联样式）
   { path: '/ai/roles', component: AiRolesFixed }, // 修复的AI对话页面（使用内联样式）
-  { path: '/psych/choose', component: PsychChooseFixed }, // 修复的心理测评页面（使用内联样式）
+  { path: '/psych/choose', component: PsychChooseFixed }, // 修复的心理测评页面
   { path: '/plan/profile', component: PlanProfileFixed }, // 修复的生活计划页面（使用内联样式）
   { path: '/checkin/daily', component: CheckinDailyFixed }, // 修复的每日打卡页面（使用内联样式）
   { path: '/rewards/points', component: RewardsPointsFixed }, // 修复的积分页面（使用内联样式）

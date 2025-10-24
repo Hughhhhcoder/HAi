@@ -152,10 +152,10 @@ export default {
         this.aiRoles = (data || []).map((r, idx) => ({
           id: r.id,
           name: r.role_name || `AI 心理师 #${r.id}`,
-          emoji: this.pickEmoji(r.role_name),
-          description: (r.prompt_template || '').slice(0, 40) || '专业心理支持，提供个性化建议',
-          tags: [],
-          gradient: this.pickGradient(idx)
+          emoji: r.emoji || this.pickEmoji(r.role_name),  // 使用后端返回的emoji
+          description: r.description || '专业心理支持，提供个性化建议',  // 使用后端返回的描述
+          tags: r.tags ? r.tags.split(',') : [],  // 使用后端返回的标签
+          gradient: r.gradient || this.pickGradient(idx)  // 使用后端返回的渐变色
         }))
       } catch (e) {
         // 回退到内置角色集合（保障页面可用）
@@ -215,7 +215,14 @@ export default {
       })
 
       try {
-        const userId = JSON.parse(localStorage.getItem('user')).id
+        const userStr = localStorage.getItem('user')
+        if (!userStr) {
+          throw new Error('用户未登录，请先登录')
+        }
+        const user = JSON.parse(userStr)
+        const userId = user.id || user.user_id || 1  // 容错处理
+        console.log('Sending chat request:', { user_id: userId, role_id: this.selectedRole.id, message: messageToSend })
+        
         const response = await fetch(`http://localhost:8000/api/ai/chat`, {
           method: 'POST',
           headers: {
@@ -228,44 +235,27 @@ export default {
           })
         })
 
-        if (!response.ok) throw new Error('AI响应失败')
-
-        const reader = response.body.getReader()
-        const decoder = new TextDecoder()
-        let aiMessage = {
-          role: 'assistant',
-          content: '',
-          timestamp: new Date()
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(`AI响应失败: ${response.status} ${errorText}`)
         }
-        this.messages.push(aiMessage)
+
+        // 处理普通JSON响应
+        const data = await response.json()
+        console.log('AI响应:', data)
+        
         this.isAiTyping = false
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split('\n')
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6)
-              if (data === '[DONE]') continue
-              
-              try {
-                const parsed = JSON.parse(data)
-                if (parsed.content) {
-                  aiMessage.content += parsed.content
-                  this.$nextTick(() => {
-                    this.scrollToBottom()
-                  })
-                }
-              } catch (e) {
-                // 忽略解析错误
-              }
-            }
-          }
-        }
+        
+        // 添加AI回复到消息列表
+        this.messages.push({
+          role: 'assistant',
+          content: data.reply || data.content || '抱歉，我暂时无法回复。',
+          timestamp: new Date()
+        })
+        
+        this.$nextTick(() => {
+          this.scrollToBottom()
+        })
       } catch (error) {
         console.error('发送消息错误:', error)
         this.messages.push({

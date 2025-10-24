@@ -4,7 +4,7 @@ from app.core.database import SessionLocal
 from app.models.user_profile import UserProfile
 from app.models.recovery_plan import RecoveryPlan
 from app.models.psych_test import PsychTest
-from app.services.memory_service import update_profile_with_recovery_plan
+from app.services.memory_service import update_profile_with_recovery_plan, update_profile_with_checkin
 from app.services.plan_service import generate_smart_recovery_plan
 import json
 from datetime import datetime
@@ -39,6 +39,20 @@ def update_profile(
     if preferences:
         profile.preferences = preferences
     db.commit()
+    
+    # 实时更新用户画像
+    try:
+        # 构建作息数据用于画像更新
+        schedule_data = {
+            'sleep_time': sleep_time,
+            'wake_time': wake_time,
+            'preferences': preferences or ''
+        }
+        update_profile_with_checkin(db, user_id, schedule_data)
+        print(f"[INFO] 已更新用户 {user_id} 的作息画像")
+    except Exception as e:
+        print(f"[WARN] 更新作息画像失败: {e}")
+    
     return {"msg": "作息信息已更新"}
 
 # 获取作息信息

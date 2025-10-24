@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, Form, Request
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 import os
@@ -41,18 +41,46 @@ def list_roles(
     return roles[skip : skip + limit]
 
 @router.post("/chat")
-def chat(
-    request: ChatRequest,
+async def chat(
+    request: Request,
     db: Session = Depends(get_db)
 ):
-    """与 AI 角色对话，支持图片和语音
-    - user_id: 用户ID
-    - role_id: AI角色ID
-    - message: 用户消息内容
-    - image_url: 图片URL（可选）
-    - audio_url: 音频URL（可选）
-    """
-    result = chat_with_ai(db, request.user_id, request.role_id, request.message, request.image_url, request.audio_url, image_data_url=request.image_data_url)
+    """与 AI 角色对话，支持图片和语音。允许 JSON 或 Form 提交。"""
+    payload = {}
+    try:
+        payload = await request.json()
+        print(f"[DEBUG] JSON payload: {payload}")
+    except Exception as e:
+        print(f"[DEBUG] JSON parse failed: {e}")
+        try:
+            form = await request.form()
+            payload = dict(form)
+            print(f"[DEBUG] Form payload: {payload}")
+        except Exception as e2:
+            print(f"[DEBUG] Form parse failed: {e2}")
+            payload = {}
+
+    # 容错解析与类型转换
+    def to_int(v):
+        try:
+            return int(v)
+        except Exception:
+            return None
+
+    user_id = to_int(payload.get("user_id"))
+    role_id = to_int(payload.get("role_id"))
+    message = (payload.get("message") or "").strip()
+    image_url = payload.get("image_url")
+    image_data_url = payload.get("image_data_url")
+    audio_url = payload.get("audio_url")
+
+    print(f"[DEBUG] Parsed: user_id={user_id}, role_id={role_id}, message='{message}'")
+
+    if user_id is None or role_id is None:
+        print(f"[DEBUG] Validation failed: user_id={user_id}, role_id={role_id}")
+        raise HTTPException(status_code=422, detail=f"user_id 与 role_id 为必填整数，收到: user_id={user_id}, role_id={role_id}")
+
+    result = chat_with_ai(db, user_id, role_id, message, image_url, audio_url, image_data_url=image_data_url)
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
@@ -77,7 +105,31 @@ def get_history(
         "timestamp": conv.created_at.isoformat(),
         "image_url": conv.image_url,
         "audio_url": conv.audio_url
-    } for conv in history] 
+    } for conv in history]
+
+@router.get("/full-history")
+def get_full_history(
+    user_id: int,
+    role_id: int,
+    db: Session = Depends(get_db)
+):
+    """获取与特定 AI 角色的完整对话历史（长期记忆）
+    
+    - user_id: 用户ID
+    - role_id: AI角色ID
+    """
+    history = get_conversation_history(db, user_id, role_id, limit=1000)  # 获取所有历史记录
+    return {
+        "total_messages": len(history),
+        "conversations": [{
+            "id": conv.id,
+            "message": conv.message,
+            "is_user": conv.is_user,
+            "timestamp": conv.created_at.isoformat(),
+            "image_url": conv.image_url,
+            "audio_url": conv.audio_url
+        } for conv in history]
+    } 
 
 @router.post("/clear")
 def clear_history(

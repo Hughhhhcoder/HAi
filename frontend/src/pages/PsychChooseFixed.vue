@@ -2,11 +2,32 @@
   <div style="min-height: calc(100vh - 4rem); background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); padding: 2rem 1rem;">
     <div style="max-width: 64rem; margin: 0 auto;">
       <!-- 标题 -->
-      <div style="text-align: center; margin-bottom: 3rem;">
+      <div v-if="currentStep === 'choose'" style="text-align: center; margin-bottom: 3rem;">
         <h1 style="font-size: 2.5rem; font-weight: 700; color: #1f2937; margin-bottom: 1rem;">
           选择 <span style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">心理测评</span>
         </h1>
         <p style="font-size: 1.125rem; color: #6b7280;">10种专业量表，全面了解您的心理状态</p>
+      </div>
+      
+      <div v-else-if="currentStep === 'testing'" style="text-align: center; margin-bottom: 3rem;">
+        <h1 style="font-size: 2.5rem; font-weight: 700; color: #1f2937; margin-bottom: 1rem;">
+          <span style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">心理测评</span>
+        </h1>
+        <p style="font-size: 1.125rem; color: #6b7280;">请根据您的真实感受选择最符合的答案</p>
+      </div>
+      
+      <div v-else-if="currentStep === 'submitting'" style="text-align: center; margin-bottom: 3rem;">
+        <h1 style="font-size: 2.5rem; font-weight: 700; color: #1f2937; margin-bottom: 1rem;">
+          <span style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">生成报告</span>
+        </h1>
+        <p style="font-size: 1.125rem; color: #6b7280;">AI正在为您生成专业的心理评估报告</p>
+      </div>
+      
+      <div v-else-if="currentStep === 'result'" style="text-align: center; margin-bottom: 3rem;">
+        <h1 style="font-size: 2.5rem; font-weight: 700; color: #1f2937; margin-bottom: 1rem;">
+          <span style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">测评结果</span>
+        </h1>
+        <p style="font-size: 1.125rem; color: #6b7280;">您的心理测评已完成，以下是详细结果</p>
       </div>
 
       <!-- 选择测评（未开始时） -->
@@ -59,7 +80,7 @@
         <div style="background: white; border-radius: 1rem; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937;">{{ currentTest.name }}</h2>
-            <span style="font-size: 0.875rem; color: #6b7280;">{{ currentQuestionIndex + 1 }} / {{ currentTest.questions }}</span>
+            <span style="font-size: 0.875rem; color: #6b7280;">{{ currentQuestionIndex + 1 }} / {{ currentTest.questions_data ? currentTest.questions_data.length : 0 }}</span>
           </div>
           <div style="background: #e5e7eb; border-radius: 0.5rem; height: 0.5rem; overflow: hidden;">
             <div :style="{ width: progressPercentage + '%', background: 'linear-gradient(90deg, #8b5cf6, #3b82f6)', height: '100%', transition: 'width 0.3s' }"></div>
@@ -69,13 +90,13 @@
         <!-- 问题卡片 -->
         <div style="background: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
           <h3 style="font-size: 1.25rem; font-weight: 600; color: #1f2937; margin-bottom: 2rem; line-height: 1.6;">
-            {{ currentQuestion.text }}
+            {{ currentQuestion }}
           </h3>
           
           <!-- 选项 -->
           <div style="display: flex; flex-direction: column; gap: 0.75rem;">
             <label 
-              v-for="(option, index) in currentQuestion.options" 
+              v-for="(option, index) in currentTest.options" 
               :key="index"
               :style="getOptionStyle(index)"
               @click="selectOption(index)"
@@ -87,7 +108,7 @@
                 v-model="selectedOption"
                 style="margin-right: 0.75rem;"
               />
-              {{ option }}
+              {{ option.text }}
             </label>
           </div>
 
@@ -115,6 +136,53 @@
         </div>
       </div>
 
+      <!-- 提交中（正在生成结果） -->
+      <div v-if="currentStep === 'submitting'">
+        <div style="background: white; border-radius: 1.5rem; padding: 3rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); text-align: center;">
+          <!-- 加载动画 -->
+          <div style="margin-bottom: 2rem;">
+            <div style="width: 80px; height: 80px; margin: 0 auto; position: relative;">
+              <div style="width: 100%; height: 100%; border: 4px solid #e5e7eb; border-top: 4px solid #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+              <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem;">🧠</div>
+            </div>
+          </div>
+          
+          <!-- 标题 -->
+          <h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 1rem;">
+            正在为您生成结果
+          </h2>
+          
+          <!-- 描述 -->
+          <p style="color: #6b7280; margin-bottom: 2rem; line-height: 1.6;">
+            AI正在分析您的测评数据，生成专业的心理评估报告<br>
+            请稍候，这通常需要几秒钟时间...
+          </p>
+          
+          <!-- 进度指示 -->
+          <div style="background: #f3f4f6; border-radius: 0.5rem; padding: 1rem; margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.875rem; color: #6b7280;">分析测评数据</span>
+              <span style="font-size: 0.875rem; color: #8b5cf6; font-weight: 600;">✓</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.875rem; color: #6b7280;">生成AI报告</span>
+              <span style="font-size: 0.875rem; color: #8b5cf6; font-weight: 600;">进行中...</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.875rem; color: #6b7280;">更新用户画像</span>
+              <span style="font-size: 0.875rem; color: #9ca3af;">等待中</span>
+            </div>
+          </div>
+          
+          <!-- 提示 -->
+          <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 1px solid #bae6fd; border-radius: 0.75rem; padding: 1rem;">
+            <p style="font-size: 0.875rem; color: #0369a1; margin: 0;">
+              💡 我们的AI正在为您生成个性化的心理评估报告，这将帮助您更好地了解自己的心理状态
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- 显示结果（完成后） -->
       <div v-if="currentStep === 'result'">
         <div style="background: white; border-radius: 1rem; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
@@ -134,35 +202,44 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
               <div>
                 <span style="font-size: 0.875rem; color: #6b7280;">总分</span>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;">{{ testResult.total_score }}</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #8b5cf6;">{{ testResult.score || testResult.result_details?.main_score || 'N/A' }}</div>
               </div>
               <div>
                 <span style="font-size: 0.875rem; color: #6b7280;">等级</span>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">{{ testResult.level }}</div>
+                <div style="font-size: 1.5rem; font-weight: 700; color: #10b981;">{{ testResult.result_details?.level || 'N/A' }}</div>
               </div>
             </div>
             <div style="margin-top: 1rem;">
               <span style="font-size: 0.875rem; color: #6b7280;">建议</span>
-              <p style="color: #374151; margin-top: 0.5rem; line-height: 1.6;">{{ testResult.suggestion }}</p>
+              <p style="color: #374151; margin-top: 0.5rem; line-height: 1.6;">{{ testResult.result_details?.suggestion || '暂无建议' }}</p>
             </div>
           </div>
 
           <!-- AI报告 -->
-          <div v-if="testResult.ai_report" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; margin-bottom: 1rem;">
-              <div style="width: 2rem; height: 2rem; background: rgba(255, 255, 255, 0.2); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 0.75rem;">
-                <svg style="width: 1rem; height: 1rem; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-                </svg>
+          <div v-if="testResult.ai_report" style="background: white; border-radius: 0.75rem; padding: 0; margin-bottom: 2rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); overflow: hidden;">
+            <!-- 报告头部 -->
+            <div style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); padding: 1.5rem; color: white;">
+              <div style="display: flex; align-items: center; margin-bottom: 1rem;">
+                <div style="width: 2rem; height: 2rem; background: rgba(255, 255, 255, 0.2); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; margin-right: 0.75rem;">
+                  <svg style="width: 1rem; height: 1rem; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                  </svg>
+                </div>
+                <h3 style="font-size: 1.125rem; font-weight: 600; color: white; margin: 0;">AI 专业评估报告</h3>
               </div>
-              <h3 style="font-size: 1.125rem; font-weight: 600; color: white;">AI 专业评估报告</h3>
             </div>
-            <div style="background: rgba(255, 255, 255, 0.1); border-radius: 0.5rem; padding: 1rem; color: white; line-height: 1.6; font-size: 0.875rem;">
-              <div v-html="renderMarkdown(testResult.ai_report)"></div>
+            
+            <!-- 报告内容 -->
+            <div style="padding: 2rem; color: #1f2937; line-height: 1.7; font-size: 0.95rem; max-height: 500px; overflow-y: auto;">
+              <div v-html="renderMarkdown(testResult.ai_report)" style="markdown-content-light"></div>
             </div>
-            <p style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.8); margin-top: 0.75rem; text-align: center;">
-              * 本报告由AI生成，仅供参考，不能替代专业医疗建议
-            </p>
+            
+            <!-- 报告底部 -->
+            <div style="background: #f8fafc; padding: 1rem; border-top: 1px solid #e5e7eb;">
+              <p style="font-size: 0.75rem; color: #6b7280; margin: 0; text-align: center;">
+                * 本报告由AI生成，仅供参考，不能替代专业医疗建议
+              </p>
+            </div>
           </div>
 
           <!-- 操作按钮 -->
@@ -192,6 +269,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { marked } from 'marked'
 
 const userId = localStorage.getItem('user_id')
 const currentStep = ref('choose')
@@ -201,6 +279,7 @@ const currentQuestionIndex = ref(0)
 const selectedOption = ref(null)
 const answers = ref([])
 const testResult = ref(null)
+const isSubmitting = ref(false)
 
 const categories = [
   { id: 'all', name: '全部' },
@@ -320,17 +399,18 @@ const filteredTests = computed(() => {
 })
 
 const currentQuestion = computed(() => {
-  if (!currentTest.value) return null
+  if (!currentTest.value || !currentTest.value.questions_data) return null
   return currentTest.value.questions_data[currentQuestionIndex.value]
 })
 
 const progressPercentage = computed(() => {
-  if (!currentTest.value) return 0
-  return ((currentQuestionIndex.value + 1) / currentTest.value.questions) * 100
+  if (!currentTest.value || !currentTest.value.questions_data) return 0
+  return ((currentQuestionIndex.value + 1) / currentTest.value.questions_data.length) * 100
 })
 
 const isLastQuestion = computed(() => {
-  return currentQuestionIndex.value === currentTest.value.questions - 1
+  if (!currentTest.value || !currentTest.value.questions_data) return false
+  return currentQuestionIndex.value === currentTest.value.questions_data.length - 1
 })
 
 const getCategoryStyle = (categoryId) => {
@@ -371,10 +451,12 @@ const startTest = async (test) => {
   
   // 从后端获取测试题目
   try {
-    const response = await fetch(`http://localhost:8000/api/psych/categories/${test.id}`)
+    const response = await fetch(`http://localhost:8000/api/psych/questionnaire?test_type=${test.id}`)
     const data = await response.json()
     if (data.questions) {
+      // 直接使用后端返回的数据格式
       currentTest.value.questions_data = data.questions
+      currentTest.value.options = data.options || []
     }
   } catch (error) {
     console.error('获取测试题目失败:', error)
@@ -388,9 +470,20 @@ const selectOption = (index) => {
 const nextQuestion = async () => {
   if (selectedOption.value === null) return
   
-  answers.value.push(selectedOption.value)
+  // 推送选项的分数而不是索引
+  const selectedScore = currentTest.value.options[selectedOption.value].score
+  answers.value.push(selectedScore)
+  
+  console.log('答题进度:', {
+    currentQuestionIndex: currentQuestionIndex.value,
+    totalQuestions: currentTest.value.questions_data ? currentTest.value.questions_data.length : 0,
+    isLastQuestion: isLastQuestion.value,
+    answersCount: answers.value.length,
+    answers: answers.value
+  })
   
   if (isLastQuestion.value) {
+    console.log('最后一题，准备提交')
     await submitTest()
   } else {
     currentQuestionIndex.value++
@@ -400,6 +493,19 @@ const nextQuestion = async () => {
 
 const submitTest = async () => {
   if (!userId) return
+  
+  // 设置加载状态
+  isSubmitting.value = true
+  currentStep.value = 'submitting'
+  
+  // 添加调试信息
+  console.log('提交测评数据:', {
+    user_id: userId,
+    test_type: currentTest.value.id,
+    answers: answers.value,
+    answers_length: answers.value.length,
+    questions_length: currentTest.value.questions_data ? currentTest.value.questions_data.length : 0
+  })
   
   try {
     const response = await fetch('http://localhost:8000/api/psych/submit', {
@@ -420,9 +526,13 @@ const submitTest = async () => {
       currentStep.value = 'result'
     } else {
       alert('提交失败：' + (result.detail || '请稍后重试'))
+      currentStep.value = 'testing' // 返回答题页面
     }
   } catch (e) {
     alert('提交失败：' + (e.message || '请稍后重试'))
+    currentStep.value = 'testing' // 返回答题页面
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -445,17 +555,198 @@ const goBack = () => {
 
 const renderMarkdown = (text) => {
   if (!text) return ''
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\n/g, '<br>')
+  try {
+    // 配置marked选项
+    marked.setOptions({
+      breaks: true,
+      gfm: true
+    })
+    return marked(text)
+  } catch (error) {
+    console.error('Markdown渲染错误:', error)
+    return text.replace(/\n/g, '<br>')
+  }
 }
 
 onMounted(() => {
-  if (!userId) {
-    // 重定向到登录页
-    window.location.href = '/login'
-  }
+  // 暂时移除登录检查，允许所有用户访问
+  console.log('心理测评页面已加载，用户ID:', userId)
 })
 </script>
+
+<style scoped>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Markdown内容样式 - 浅色主题 */
+:deep(.markdown-content-light) {
+  color: #1f2937;
+}
+
+:deep(.markdown-content-light h1),
+:deep(.markdown-content-light h2),
+:deep(.markdown-content-light h3),
+:deep(.markdown-content-light h4),
+:deep(.markdown-content-light h5),
+:deep(.markdown-content-light h6) {
+  color: #1f2937;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+:deep(.markdown-content-light h1) {
+  font-size: 1.5rem;
+  border-bottom: 2px solid #8b5cf6;
+  padding-bottom: 0.75rem;
+  color: #8b5cf6;
+}
+
+:deep(.markdown-content-light h2) {
+  font-size: 1.25rem;
+  color: #374151;
+  border-left: 4px solid #8b5cf6;
+  padding-left: 1rem;
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+}
+
+:deep(.markdown-content-light h3) {
+  font-size: 1.125rem;
+  color: #4b5563;
+}
+
+:deep(.markdown-content-light p) {
+  margin-bottom: 1rem;
+  line-height: 1.7;
+  color: #374151;
+}
+
+:deep(.markdown-content-light ul),
+:deep(.markdown-content-light ol) {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+:deep(.markdown-content-light li) {
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+:deep(.markdown-content-light strong) {
+  font-weight: 700;
+  color: #8b5cf6;
+}
+
+:deep(.markdown-content-light em) {
+  font-style: italic;
+  color: #6b7280;
+}
+
+:deep(.markdown-content-light code) {
+  background: #f1f5f9;
+  color: #8b5cf6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+:deep(.markdown-content-light blockquote) {
+  border-left: 4px solid #8b5cf6;
+  padding-left: 1.5rem;
+  margin: 1.5rem 0;
+  font-style: italic;
+  color: #6b7280;
+  background: #f8fafc;
+  padding: 1rem 1.5rem;
+  border-radius: 0.5rem;
+}
+
+:deep(.markdown-content-light a) {
+  color: #8b5cf6;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+:deep(.markdown-content-light a:hover) {
+  text-decoration: underline;
+}
+
+/* 保持原有的深色主题样式作为备用 */
+:deep(.markdown-content) {
+  color: white;
+}
+
+:deep(.markdown-content h1),
+:deep(.markdown-content h2),
+:deep(.markdown-content h3),
+:deep(.markdown-content h4),
+:deep(.markdown-content h5),
+:deep(.markdown-content h6) {
+  color: white;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+:deep(.markdown-content h1) {
+  font-size: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 0.5rem;
+}
+
+:deep(.markdown-content h2) {
+  font-size: 1.125rem;
+}
+
+:deep(.markdown-content h3) {
+  font-size: 1rem;
+}
+
+:deep(.markdown-content p) {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+:deep(.markdown-content ul),
+:deep(.markdown-content ol) {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+:deep(.markdown-content li) {
+  margin-bottom: 0.25rem;
+}
+
+:deep(.markdown-content strong) {
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+:deep(.markdown-content em) {
+  font-style: italic;
+  color: #a78bfa;
+}
+
+:deep(.markdown-content code) {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+}
+
+:deep(.markdown-content blockquote) {
+  border-left: 3px solid rgba(255, 255, 255, 0.5);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
+}
+</style>
 
