@@ -190,12 +190,23 @@ export default {
     renderMarkdown(text) {
       if (!text) return ''
       try {
-        // 配置marked选项
+        // 配置marked选项 - 优化换行处理
         marked.setOptions({
-          breaks: true,
-          gfm: true
+          breaks: false,  // 关闭自动换行，减少不必要的<br>标签
+          gfm: true,
+          pedantic: false,
+          sanitize: false,
+          smartLists: true,
+          smartypants: false
         })
-        return marked(text)
+        
+        // 预处理文本，移除多余的空行
+        const cleanedText = text
+          .replace(/\n\s*\n\s*\n/g, '\n\n')  // 将多个连续空行合并为两个
+          .replace(/\n{3,}/g, '\n\n')       // 限制最多两个连续换行
+          .trim()
+        
+        return marked(cleanedText)
       } catch (error) {
         console.error('Markdown渲染错误:', error)
         return text.replace(/\n/g, '<br>')
@@ -744,12 +755,23 @@ export default {
   }
 }
 
-/* Markdown内容样式 */
+/* Markdown内容样式 - 优化版 */
 :deep(.message-text) {
   color: #1f2937;
-  line-height: 1.7;
+  line-height: 1.6;
+  font-size: 0.95rem;
 }
 
+/* 重置所有元素的默认边距 */
+:deep(.message-text *:first-child) {
+  margin-top: 0;
+}
+
+:deep(.message-text *:last-child) {
+  margin-bottom: 0;
+}
+
+/* 标题样式 - 减少间距 */
 :deep(.message-text h1),
 :deep(.message-text h2),
 :deep(.message-text h3),
@@ -758,47 +780,53 @@ export default {
 :deep(.message-text h6) {
   color: #1f2937;
   font-weight: 700;
-  margin-top: 1.5rem;
-  margin-bottom: 0.75rem;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 :deep(.message-text h1) {
-  font-size: 1.5rem;
-  border-bottom: 2px solid #8b5cf6;
-  padding-bottom: 0.5rem;
+  font-size: 1.25rem;
   color: #8b5cf6;
+  border-bottom: 1px solid #8b5cf6;
+  padding-bottom: 0.25rem;
 }
 
 :deep(.message-text h2) {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   color: #374151;
-  border-left: 4px solid #8b5cf6;
-  padding-left: 1rem;
+  border-left: 3px solid #8b5cf6;
+  padding-left: 0.75rem;
   background: #f8fafc;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
 }
 
 :deep(.message-text h3) {
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: #4b5563;
+  font-weight: 600;
 }
 
+/* 段落样式 - 紧凑布局 */
 :deep(.message-text p) {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   line-height: 1.6;
+  text-align: justify;
 }
 
+/* 列表样式 - 紧凑布局 */
 :deep(.message-text ul),
 :deep(.message-text ol) {
-  margin-bottom: 0.75rem;
-  padding-left: 1.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1.25rem;
 }
 
 :deep(.message-text li) {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.125rem;
+  line-height: 1.5;
 }
 
+/* 强调文本 */
 :deep(.message-text strong) {
   font-weight: 700;
   color: #8b5cf6;
@@ -809,26 +837,29 @@ export default {
   color: #6b7280;
 }
 
+/* 代码样式 */
 :deep(.message-text code) {
   background: #f3f4f6;
-  padding: 0.125rem 0.375rem;
+  padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   font-family: 'Courier New', monospace;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #dc2626;
 }
 
+/* 引用块 */
 :deep(.message-text blockquote) {
-  border-left: 4px solid #8b5cf6;
-  padding-left: 1rem;
-  margin: 1rem 0;
+  border-left: 3px solid #8b5cf6;
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
   font-style: italic;
   color: #6b7280;
   background: #f8fafc;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
 }
 
+/* 链接样式 */
 :deep(.message-text a) {
   color: #8b5cf6;
   text-decoration: underline;
@@ -836,5 +867,20 @@ export default {
 
 :deep(.message-text a:hover) {
   color: #7c3aed;
+}
+
+/* 移除多余的换行和间距 */
+:deep(.message-text br) {
+  display: none;
+}
+
+/* 优化段落间距 */
+:deep(.message-text p + p) {
+  margin-top: 0.25rem;
+}
+
+/* 列表项之间的间距 */
+:deep(.message-text li + li) {
+  margin-top: 0.125rem;
 }
 </style>
