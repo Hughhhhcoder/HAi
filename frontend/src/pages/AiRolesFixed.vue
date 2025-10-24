@@ -79,7 +79,7 @@
             </div>
             <div class="message-content">
               <div class="message-bubble">
-                <p class="message-text">{{ message.content }}</p>
+                <div class="message-text" v-html="renderMarkdown(message.content)"></div>
               </div>
               <span class="message-time">{{ formatTime(message.timestamp) }}</span>
             </div>
@@ -130,6 +130,8 @@
 </template>
 
 <script>
+import { marked } from 'marked'
+
 export default {
   name: 'AiRolesFixed',
   data() {
@@ -184,6 +186,20 @@ export default {
       if (name && name.includes('关系')) return '🤝'
       if (name && name.includes('成长')) return '🌟'
       return '🧠'
+    },
+    renderMarkdown(text) {
+      if (!text) return ''
+      try {
+        // 配置marked选项
+        marked.setOptions({
+          breaks: true,
+          gfm: true
+        })
+        return marked(text)
+      } catch (error) {
+        console.error('Markdown渲染错误:', error)
+        return text.replace(/\n/g, '<br>')
+      }
     },
     selectRole(role) {
       this.selectedRole = role
@@ -726,5 +742,99 @@ export default {
   .chat-section {
     height: calc(100vh - 8rem);
   }
+}
+
+/* Markdown内容样式 */
+:deep(.message-text) {
+  color: #1f2937;
+  line-height: 1.7;
+}
+
+:deep(.message-text h1),
+:deep(.message-text h2),
+:deep(.message-text h3),
+:deep(.message-text h4),
+:deep(.message-text h5),
+:deep(.message-text h6) {
+  color: #1f2937;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+:deep(.message-text h1) {
+  font-size: 1.5rem;
+  border-bottom: 2px solid #8b5cf6;
+  padding-bottom: 0.5rem;
+  color: #8b5cf6;
+}
+
+:deep(.message-text h2) {
+  font-size: 1.25rem;
+  color: #374151;
+  border-left: 4px solid #8b5cf6;
+  padding-left: 1rem;
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+}
+
+:deep(.message-text h3) {
+  font-size: 1.125rem;
+  color: #4b5563;
+}
+
+:deep(.message-text p) {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+:deep(.message-text ul),
+:deep(.message-text ol) {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+:deep(.message-text li) {
+  margin-bottom: 0.25rem;
+}
+
+:deep(.message-text strong) {
+  font-weight: 700;
+  color: #8b5cf6;
+}
+
+:deep(.message-text em) {
+  font-style: italic;
+  color: #6b7280;
+}
+
+:deep(.message-text code) {
+  background: #f3f4f6;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #dc2626;
+}
+
+:deep(.message-text blockquote) {
+  border-left: 4px solid #8b5cf6;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  font-style: italic;
+  color: #6b7280;
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+}
+
+:deep(.message-text a) {
+  color: #8b5cf6;
+  text-decoration: underline;
+}
+
+:deep(.message-text a:hover) {
+  color: #7c3aed;
 }
 </style>
