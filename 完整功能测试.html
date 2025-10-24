@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hai 心理健康平台 - 完整功能测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .test-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s;
+        }
+        
+        .test-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+        
+        .test-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .test-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-success { background: #28a745; }
+        .status-error { background: #dc3545; }
+        .status-pending { background: #ffc107; }
+        
+        .network-info {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .network-info h4 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .info-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .info-value {
+            color: #666;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">💚</div>
+            <h1>Hai 心理健康平台</h1>
+            <p class="subtitle">完整功能测试 - 局域网访问验证</p>
+        </div>
+        
+        <div class="test-grid">
+            <!-- 用户认证测试 -->
+            <div class="test-card">
+                <h3><span class="status-indicator status-pending"></span>用户认证</h3>
+                <button class="test-btn" onclick="testLogin()">测试登录</button>
+                <button class="test-btn" onclick="testRegister()">测试注册</button>
+                <div id="auth-result" class="result"></div>
+            </div>
+            
+            <!-- AI功能测试 -->
+            <div class="test-card">
+                <h3><span class="status-indicator status-pending"></span>AI 对话功能</h3>
+                <button class="test-btn" onclick="testAiRoles()">获取AI角色</button>
+                <button class="test-btn" onclick="testAiChat()">测试AI对话</button>
+                <div id="ai-result" class="result"></div>
+            </div>
+            
+            <!-- 心理测评测试 -->
+            <div class="test-card">
+                <h3><span class="status-indicator status-pending"></span>心理测评</h3>
+                <button class="test-btn" onclick="testPsychCategories()">获取测评分类</button>
+                <button class="test-btn" onclick="testPsychQuestionnaire()">获取问卷</button>
+                <div id="psych-result" class="result"></div>
+            </div>
+            
+            <!-- 打卡功能测试 -->
+            <div class="test-card">
+                <h3><span class="status-indicator status-pending"></span>每日打卡</h3>
+                <button class="test-btn" onclick="testCheckin()">测试打卡</button>
+                <button class="test-btn" onclick="testCheckinHistory()">打卡历史</button>
+                <div id="checkin-result" class="result"></div>
+            </div>
+            
+            <!-- 生活计划测试 -->
+            <div class="test-card">
+                <h3><span class="status-indicator status-pending"></span>生活计划</h3>
+                <button class="test-btn" onclick="testPlanProfile()">获取计划</button>
+                <button class="test-btn" onclick="testPlanGenerate()">生成计划</button>
+                <div id="plan-result" class="result"></div>
+            </div>
+            
+            <!-- 积分系统测试 -->
+            <div class="test-card">
+                <h3><span class="status-indicator status-pending"></span>积分系统</h3>
+                <button class="test-btn" onclick="testRewards()">获取积分</button>
+                <button class="test-btn" onclick="testRewardsHistory()">积分历史</button>
+                <div id="rewards-result" class="result"></div>
+            </div>
+        </div>
+        
+        <div class="network-info">
+            <h4>🌐 网络连接信息</h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">当前URL</div>
+                    <div class="info-value" id="currentUrl"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">设备类型</div>
+                    <div class="info-value" id="deviceType"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">屏幕尺寸</div>
+                    <div class="info-value" id="screenSize"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">网络状态</div>
+                    <div class="info-value" id="networkStatus"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">用户代理</div>
+                    <div class="info-value" id="userAgent"></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">在线状态</div>
+                    <div class="info-value" id="onlineStatus"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 显示网络信息
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('deviceType').textContent = /Mobile|Android|iPhone|iPad/.test(navigator.userAgent) ? '移动设备' : '桌面设备';
+        document.getElementById('screenSize').textContent = `${window.innerWidth} x ${window.innerHeight}`;
+        document.getElementById('networkStatus').textContent = navigator.onLine ? '已连接' : '未连接';
+        document.getElementById('userAgent').textContent = navigator.userAgent.substring(0, 50) + '...';
+        document.getElementById('onlineStatus').textContent = navigator.onLine ? '在线' : '离线';
+        
+        // 测试用户登录
+        async function testLogin() {
+            const resultDiv = document.getElementById('auth-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在测试登录...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/user/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                });
+                
+                const data = await response.json();
+                if (data.user_id) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ 登录成功！<br>用户ID: ${data.user_id}<br>消息: ${data.msg}`;
+                } else {
+                    throw new Error('登录响应格式错误');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 登录失败: ${error.message}`;
+            }
+        }
+        
+        // 测试用户注册
+        async function testRegister() {
+            const resultDiv = document.getElementById('auth-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在测试注册...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/user/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username: 'testuser' + Date.now(), 
+                        password: 'test123' 
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ 注册成功！<br>用户ID: ${data.user_id}<br>消息: ${data.msg}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 注册失败: ${error.message}`;
+            }
+        }
+        
+        // 测试AI角色
+        async function testAiRoles() {
+            const resultDiv = document.getElementById('ai-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在获取AI角色...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/ai/roles');
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ 获取AI角色成功！<br>角色数量: ${data.length}<br>第一个角色: ${data[0].role_name}`;
+                } else {
+                    throw new Error('AI角色数据为空');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 获取AI角色失败: ${error.message}`;
+            }
+        }
+        
+        // 测试AI对话
+        async function testAiChat() {
+            const resultDiv = document.getElementById('ai-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在测试AI对话...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: 1,
+                        role_id: 1,
+                        message: '你好，我想测试一下AI对话功能'
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.message) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ AI对话成功！<br>AI回复: ${data.message.substring(0, 50)}...`;
+                } else {
+                    throw new Error('AI对话响应格式错误');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ AI对话失败: ${error.message}`;
+            }
+        }
+        
+        // 测试心理测评分类
+        async function testPsychCategories() {
+            const resultDiv = document.getElementById('psych-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在获取心理测评分类...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/psych/categories');
+                const data = await response.json();
+                if (data && Object.keys(data).length > 0) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ 获取心理测评分类成功！<br>分类数量: ${Object.keys(data).length}<br>分类: ${Object.keys(data).join(', ')}`;
+                } else {
+                    throw new Error('心理测评分类数据为空');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 获取心理测评分类失败: ${error.message}`;
+            }
+        }
+        
+        // 测试心理测评问卷
+        async function testPsychQuestionnaire() {
+            const resultDiv = document.getElementById('psych-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在获取心理测评问卷...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/psych/questionnaire?test_type=PHQ9');
+                const data = await response.json();
+                if (data && data.questions) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `✅ 获取心理测评问卷成功！<br>问卷类型: PHQ9<br>题目数量: ${data.questions.length}`;
+                } else {
+                    throw new Error('心理测评问卷数据为空');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 获取心理测评问卷失败: ${error.message}`;
+            }
+        }
+        
+        // 测试每日打卡
+        async function testCheckin() {
+            const resultDiv = document.getElementById('checkin-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在测试每日打卡...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/checkin/daily', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        user_id: '1',
+                        mood: '良好',
+                        sleep_hours: '8',
+                        completed_tasks: '完成测试任务'
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ 每日打卡成功！<br>消息: ${data.msg || '打卡成功'}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 每日打卡失败: ${error.message}`;
+            }
+        }
+        
+        // 测试打卡历史
+        async function testCheckinHistory() {
+            const resultDiv = document.getElementById('checkin-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在获取打卡历史...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/checkin/history?user_id=1');
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ 获取打卡历史成功！<br>记录数量: ${data.length}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 获取打卡历史失败: ${error.message}`;
+            }
+        }
+        
+        // 测试生活计划
+        async function testPlanProfile() {
+            const resultDiv = document.getElementById('plan-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在获取生活计划...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/plan/profile?user_id=1');
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ 获取生活计划成功！<br>计划状态: ${data.plan_text ? '已生成' : '未生成'}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 获取生活计划失败: ${error.message}`;
+            }
+        }
+        
+        // 测试生成计划
+        async function testPlanGenerate() {
+            const resultDiv = document.getElementById('plan-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在生成生活计划...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/plan/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ user_id: '1' })
+                });
+                
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ 生成生活计划成功！<br>消息: ${data.msg || '计划生成成功'}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 生成生活计划失败: ${error.message}`;
+            }
+        }
+        
+        // 测试积分系统
+        async function testRewards() {
+            const resultDiv = document.getElementById('rewards-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在获取积分信息...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/rewards/points?user_id=1');
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ 获取积分信息成功！<br>积分: ${data.points || 0}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 获取积分信息失败: ${error.message}`;
+            }
+        }
+        
+        // 测试积分历史
+        async function testRewardsHistory() {
+            const resultDiv = document.getElementById('rewards-result');
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '正在获取积分历史...';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/rewards/history?user_id=1');
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `✅ 获取积分历史成功！<br>记录数量: ${data.length}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 获取积分历史失败: ${error.message}`;
+            }
+        }
+        
+        // 页面加载时自动运行基础测试
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                testLogin();
+                testAiRoles();
+                testPsychCategories();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
