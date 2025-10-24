@@ -18,8 +18,42 @@
     <div class="main-content">
       <!-- 角色选择（未选择时显示） -->
       <div v-if="!selectedRole" class="roles-section">
-        <h2 class="section-title">选择您的专属 AI 心理师</h2>
-        <p class="section-subtitle">每位 AI 都有独特的专业领域和咨询风格</p>
+        <div class="section-header">
+          <div class="section-title-area">
+            <h2 class="section-title">选择您的专属 AI 心理师</h2>
+            <p class="section-subtitle">每位 AI 都有独特的专业领域和咨询风格</p>
+          </div>
+          <!-- 历史咨询回顾按钮 - 放在右上角 -->
+          <div class="consultation-review-area">
+            <button @click="showConsultationReview" class="consultation-review-card">
+              <div class="review-header">
+                <svg class="review-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span class="review-title">历史咨询回顾</span>
+              </div>
+              <div v-if="lastConsultation" class="review-content">
+                <div class="review-item">
+                  <span class="review-label">上次咨询：</span>
+                  <span class="review-value">{{ formatTimestamp(lastConsultation.last_message_time) }}</span>
+                </div>
+                <div class="review-item">
+                  <span class="review-label">咨询师：</span>
+                  <span class="review-value">{{ lastConsultation.role_name }}</span>
+                </div>
+                <div class="review-item">
+                  <span class="review-label">摘要：</span>
+                  <span class="review-summary">{{ lastConsultation.summary || '暂无摘要' }}</span>
+                </div>
+              </div>
+              <div v-else class="review-content">
+                <div class="review-empty">
+                  <span>暂无咨询记录</span>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
         
         <div class="roles-grid">
           <div
@@ -61,12 +95,6 @@
             </div>
           </div>
           <div class="chat-actions">
-            <button @click="showConsultationReview" class="consultation-review-btn">
-              <svg class="review-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
-              历史咨询回顾
-            </button>
             <button @click="clearChat" class="clear-chat-btn">
               <svg class="clear-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -266,7 +294,8 @@ export default {
         totalConsultants: 0,
         totalConsultations: 0,
         lastConsultationTime: '暂无'
-      }
+      },
+      lastConsultation: null
     }
   },
   methods: {
@@ -498,6 +527,9 @@ export default {
         // 按最后对话时间排序
         consultationData.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime))
         
+        // 更新最后一次咨询信息
+        this.lastConsultation = latestConsultation
+        
         this.consultationReviews = consultationData
         this.consultationStats = {
           totalConsultants: consultationData.length,
@@ -513,6 +545,43 @@ export default {
     },
     closeConsultationModal() {
       this.showConsultationModal = false
+    },
+    async loadLastConsultation() {
+      try {
+        const userId = JSON.parse(localStorage.getItem('user')).id
+        let latestConsultation = null
+        let latestTime = null
+        
+        // 获取所有AI角色的对话历史，找到最新的
+        for (const role of this.aiRoles) {
+          try {
+            const response = await fetch(`/api/ai/full-history?user_id=${userId}&role_id=${role.id}`)
+            if (response.ok) {
+              const data = await response.json()
+              if (data.conversations && data.conversations.length > 0) {
+                const lastMessageTime = data.conversations[0].timestamp
+                
+                // 找到最新的咨询记录
+                if (!latestTime || new Date(lastMessageTime) > new Date(latestTime)) {
+                  latestTime = lastMessageTime
+                  const summary = this.generateConsultationSummary(data.conversations)
+                  latestConsultation = {
+                    role_name: role.name,
+                    last_message_time: lastMessageTime,
+                    summary: summary
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`获取角色 ${role.name} 的历史记录失败:`, error)
+          }
+        }
+        
+        this.lastConsultation = latestConsultation
+      } catch (error) {
+        console.error('Error loading last consultation:', error)
+      }
     },
     generateConsultationSummary(conversations) {
       if (conversations.length === 0) return '暂无对话记录'
@@ -575,8 +644,9 @@ export default {
       }
     }
   },
-  created() {
-    this.fetchRoles()
+  async created() {
+    await this.fetchRoles()
+    await this.loadLastConsultation()
   }
 }
 </script>
@@ -659,6 +729,107 @@ export default {
 .roles-section {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  gap: 2rem;
+}
+
+.section-title-area {
+  flex: 1;
+}
+
+.consultation-review-area {
+  flex-shrink: 0;
+}
+
+.consultation-review-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  min-width: 280px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.consultation-review-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.review-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.review-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.review-content {
+  font-size: 0.875rem;
+}
+
+.review-item {
+  display: flex;
+  margin-bottom: 0.5rem;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.review-label {
+  font-weight: 600;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.review-value {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.review-summary {
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.review-empty {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-style: italic;
+}
+
+/* 移动设备优化 */
+@media (max-width: 768px) {
+  .section-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .consultation-review-card {
+    min-width: auto;
+    width: 100%;
+  }
 }
 
 
@@ -1295,32 +1466,6 @@ export default {
   margin-top: 0.5rem;
 }
 
-.consultation-review-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-  color: white;
-  border: none;
-  border-radius: 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.consultation-review-btn:hover {
-  background: linear-gradient(135deg, #7c3aed, #2563eb);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.review-icon {
-  width: 1rem;
-  height: 1rem;
-}
 
 
 /* 移动设备优化 */
@@ -1331,12 +1476,6 @@ export default {
     width: 100%;
   }
   
-  .consultation-review-btn {
-    width: 100%;
-    justify-content: center;
-    padding: 1rem;
-    font-size: 1rem;
-  }
 }
 
 .clear-chat-btn {
