@@ -6,7 +6,22 @@
         <h1 style="font-size: 2.5rem; font-weight: 700; color: #1f2937; margin-bottom: 1rem;">
           选择 <span style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">心理测评</span>
         </h1>
-        <p style="font-size: 1.125rem; color: #6b7280;">10种专业量表，全面了解您的心理状态</p>
+        <p style="font-size: 1.125rem; color: #6b7280; margin-bottom: 2rem;">10种专业量表，全面了解您的心理状态</p>
+        
+        <!-- 历史记录按钮 -->
+        <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
+          <button 
+            @click="showTestHistory"
+            style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #10b981, #059669); color: white; border-radius: 0.75rem; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); display: flex; align-items: center; gap: 0.5rem;"
+            @mouseenter="e => { e.target.style.background = 'linear-gradient(135deg, #059669, #047857)'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.4)'; }"
+            @mouseleave="e => { e.target.style.background = 'linear-gradient(135deg, #10b981, #059669)'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'; }"
+          >
+            <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            📊 查看测评记录
+          </button>
+        </div>
       </div>
       
       <div v-else-if="currentStep === 'testing'" style="text-align: center; margin-bottom: 3rem;">
@@ -253,29 +268,38 @@
           </div>
 
           <!-- 操作按钮 -->
-          <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 2rem;">
             <button 
               @click="showTestHistory"
-              style="padding: 0.75rem 1.5rem; background: #10b981; color: white; border-radius: 0.75rem; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s;"
-              @mouseenter="e => e.target.style.background = '#059669'"
-              @mouseleave="e => e.target.style.background = '#10b981'"
+              style="padding: 1rem 2rem; background: linear-gradient(135deg, #10b981, #059669); color: white; border-radius: 1rem; border: none; font-weight: 700; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;"
+              @mouseenter="e => { e.target.style.background = 'linear-gradient(135deg, #059669, #047857)'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 8px 20px rgba(16, 185, 129, 0.4)'; }"
+              @mouseleave="e => { e.target.style.background = 'linear-gradient(135deg, #10b981, #059669)'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'; }"
             >
+              <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
               📊 测评记录
             </button>
             <button 
               @click="startNewTest"
-              style="padding: 0.75rem 1.5rem; background: #8b5cf6; color: white; border-radius: 0.75rem; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s;"
-              @mouseenter="e => e.target.style.background = '#7c3aed'"
-              @mouseleave="e => e.target.style.background = '#8b5cf6'"
+              style="padding: 1rem 2rem; background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: white; border-radius: 1rem; border: none; font-weight: 700; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3); font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;"
+              @mouseenter="e => { e.target.style.background = 'linear-gradient(135deg, #7c3aed, #2563eb)'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 8px 20px rgba(139, 92, 246, 0.4)'; }"
+              @mouseleave="e => { e.target.style.background = 'linear-gradient(135deg, #8b5cf6, #3b82f6)'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.3)'; }"
             >
+              <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
               继续其他测评
             </button>
             <router-link 
               to="/home"
-              style="padding: 0.75rem 1.5rem; background: #6b7280; color: white; border-radius: 0.75rem; text-decoration: none; font-weight: 600; transition: background 0.2s; display: inline-block;"
-              @mouseenter="e => e.target.style.background = '#4b5563'"
-              @mouseleave="e => e.target.style.background = '#6b7280'"
+              style="padding: 1rem 2rem; background: linear-gradient(135deg, #6b7280, #4b5563); color: white; border-radius: 1rem; text-decoration: none; font-weight: 700; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3); font-size: 1rem;"
+              @mouseenter="e => { e.target.style.background = 'linear-gradient(135deg, #4b5563, #374151)'; e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 8px 20px rgba(107, 114, 128, 0.4)'; }"
+              @mouseleave="e => { e.target.style.background = 'linear-gradient(135deg, #6b7280, #4b5563)'; e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 12px rgba(107, 114, 128, 0.3)'; }"
             >
+              <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+              </svg>
               返回首页
             </router-link>
           </div>

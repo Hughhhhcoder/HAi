@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史记录按钮测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .button-demo {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .demo-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .demo-btn.consultation {
+            background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+            color: white;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+        
+        .demo-btn.history {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .demo-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .demo-btn.consultation:hover {
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+        }
+        
+        .demo-btn.history:hover {
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .instructions {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">💚</div>
+            <h1>历史记录按钮测试</h1>
+            <p class="subtitle">验证AI对话和心理测评页面的历史记录功能</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎯 测试目标</h2>
+            <div class="status info">
+                验证AI对话页面和心理测评页面的历史记录按钮是否正确显示和功能正常
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📱 按钮样式预览</h2>
+            <p>以下是优化后的历史记录按钮样式：</p>
+            <div class="button-demo">
+                <button class="demo-btn consultation">
+                    <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    历史咨询回顾
+                </button>
+                <button class="demo-btn history">
+                    <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    历史记录
+                </button>
+                <button class="demo-btn history">
+                    <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    📊 测评记录
+                </button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 测试步骤</h2>
+            <div class="instructions">
+                <h3>AI对话页面测试：</h3>
+                <ol>
+                    <li>访问 <a href="http://192.168.110.17:5174/ai/roles" target="_blank">AI对话页面</a></li>
+                    <li>选择一个AI心理师开始对话</li>
+                    <li>在聊天界面顶部查找两个按钮：
+                        <ul>
+                            <li><strong>历史咨询回顾</strong> - 紫色渐变按钮</li>
+                            <li><strong>历史记录</strong> - 绿色渐变按钮</li>
+                        </ul>
+                    </li>
+                    <li>点击按钮测试功能是否正常</li>
+                </ol>
+                
+                <h3>心理测评页面测试：</h3>
+                <ol>
+                    <li>访问 <a href="http://192.168.110.17:5174/psych/choose" target="_blank">心理测评页面</a></li>
+                    <li>在页面顶部查找 <strong>📊 查看测评记录</strong> 按钮</li>
+                    <li>完成一个心理测评</li>
+                    <li>在结果页面查找 <strong>📊 测评记录</strong> 按钮</li>
+                    <li>点击按钮测试功能是否正常</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📋 预期结果</h2>
+            <div class="status success">
+                ✅ AI对话页面应该显示两个历史记录按钮<br>
+                ✅ 心理测评页面应该显示测评记录按钮<br>
+                ✅ 按钮样式应该更加明显和美观<br>
+                ✅ 移动设备上按钮应该全宽显示<br>
+                ✅ 点击按钮应该打开相应的历史记录弹窗
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🚀 快速访问</h2>
+            <div style="text-align: center;">
+                <a href="http://192.168.110.17:5174/ai/roles" class="test-btn" target="_blank">测试AI对话页面</a>
+                <a href="http://192.168.110.17:5174/psych/choose" class="test-btn" target="_blank">测试心理测评页面</a>
+                <a href="http://192.168.110.17:5174" class="test-btn" target="_blank">返回首页</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
