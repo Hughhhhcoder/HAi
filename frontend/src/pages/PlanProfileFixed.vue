@@ -278,32 +278,65 @@ function formatTimestamp(timestamp) {
   try {
     const date = new Date(timestamp)
     const now = new Date()
+    
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      return '时间格式错误'
+    }
+    
+    // 获取用户时区
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    
+    // 计算时间差（毫秒）
     const diff = now - date
+    const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24))
     
     // 如果是今天
-    if (diff < 24 * 60 * 60 * 1000 && date.getDate() === now.getDate()) {
-      return date.toLocaleTimeString('zh-CN', { 
+    if (diffDays === 0) {
+      return `今天 ${date.toLocaleTimeString('zh-CN', { 
         hour: '2-digit', 
         minute: '2-digit',
-        second: '2-digit'
-      })
+        timeZone: userTimezone
+      })}`
     }
     
     // 如果是昨天
-    const yesterday = new Date(now)
-    yesterday.setDate(yesterday.getDate() - 1)
-    if (date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth()) {
-      return `昨天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
+    if (diffDays === 1) {
+      return `昨天 ${date.toLocaleTimeString('zh-CN', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: userTimezone
+      })}`
     }
     
-    // 其他情况显示完整日期时间
+    // 如果是本周内（2-6天前）
+    if (diffDays >= 2 && diffDays <= 6) {
+      return `${diffDays}天前 ${date.toLocaleTimeString('zh-CN', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: userTimezone
+      })}`
+    }
+    
+    // 如果是本周内（显示星期几）
+    if (diffDays >= 1 && diffDays <= 7) {
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+      const weekday = weekdays[date.getDay()]
+      return `${weekday} ${date.toLocaleTimeString('zh-CN', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        timeZone: userTimezone
+      })}`
+    }
+    
+    // 其他情况显示完整日期时间（用户时区）
     return date.toLocaleString('zh-CN', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      timeZone: userTimezone
     })
   } catch (error) {
     console.error('时间格式化错误:', error)
