@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史咨询回顾功能测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .feature-demo {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-demo h3 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .demo-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .demo-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .demo-item h4 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+        
+        .demo-item p {
+            font-size: 12px;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+        
+        .instructions {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .highlight h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .highlight p {
+            color: #856404;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">💚</div>
+            <h1>历史咨询回顾功能测试</h1>
+            <p class="subtitle">验证AI对话页面的历史咨询回顾功能优化</p>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎯 功能优化说明</h2>
+            <div class="status info">
+                根据用户需求，对AI对话页面的历史记录功能进行了以下优化：
+            </div>
+            
+            <div class="highlight">
+                <h4>✅ 已完成的优化：</h4>
+                <p>1. 移除了"历史记录"按钮，只保留"历史咨询回顾"按钮<br>
+                2. 将"历史咨询回顾"按钮移动到AI选择页面的右上角<br>
+                3. 按钮内容显示：上次咨询时间、咨询摘要、咨询的AI心理师<br>
+                4. 优化了按钮样式，使其更加美观和醒目</p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎨 新功能展示</h2>
+            <div class="feature-demo">
+                <h3>📊 历史咨询回顾卡片</h3>
+                <div class="demo-content">
+                    <div class="demo-item">
+                        <h4>📅 上次咨询</h4>
+                        <p>显示最后一次咨询的时间，智能格式化显示（今天、昨天、具体日期）</p>
+                    </div>
+                    <div class="demo-item">
+                        <h4>👨‍⚕️ 咨询师</h4>
+                        <p>显示最后一次咨询的AI心理师名称，如"认知教练·理查德"</p>
+                    </div>
+                    <div class="demo-item">
+                        <h4>📝 咨询摘要</h4>
+                        <p>显示最后一次咨询的智能摘要，帮助用户快速回忆咨询内容</p>
+                    </div>
+                    <div class="demo-item">
+                        <h4>🎯 位置优化</h4>
+                        <p>按钮位于AI选择页面的右上角，用户一眼就能看到历史咨询信息</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 测试步骤</h2>
+            <div class="instructions">
+                <h3>主要测试点：</h3>
+                <ol>
+                    <li>访问 <a href="http://192.168.110.17:5174/ai/roles" target="_blank">AI对话页面</a></li>
+                    <li>在AI选择页面的右上角查找"历史咨询回顾"卡片</li>
+                    <li>验证卡片是否显示：
+                        <ul>
+                            <li>上次咨询时间</li>
+                            <li>咨询的AI心理师名称</li>
+                            <li>咨询摘要</li>
+                        </ul>
+                    </li>
+                    <li>点击卡片测试是否打开详细的历史咨询回顾弹窗</li>
+                    <li>在聊天界面中，验证只显示"历史咨询回顾"按钮，不再显示"历史记录"按钮</li>
+                </ol>
+                
+                <h3>预期结果：</h3>
+                <ol>
+                    <li>AI选择页面右上角显示美观的历史咨询回顾卡片</li>
+                    <li>卡片内容包含上次咨询的完整信息</li>
+                    <li>聊天界面只保留"历史咨询回顾"按钮</li>
+                    <li>移动设备上卡片自适应显示</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📋 功能对比</h2>
+            <div class="status success">
+                <strong>优化前：</strong><br>
+                ❌ 两个按钮功能重复<br>
+                ❌ 按钮位置不够明显<br>
+                ❌ 按钮样式不够美观<br>
+                ❌ 移动设备显示效果差
+            </div>
+            
+            <div class="status success">
+                <strong>优化后：</strong><br>
+                ✅ 只保留一个"历史咨询回顾"按钮<br>
+                ✅ 按钮位置在AI选择页面右上角，非常醒目<br>
+                ✅ 按钮样式美观，使用渐变背景和阴影效果<br>
+                ✅ 显示完整的咨询信息（时间、咨询师、摘要）<br>
+                ✅ 移动设备完美适配
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🚀 快速访问</h2>
+            <div style="text-align: center;">
+                <a href="http://192.168.110.17:5174/ai/roles" class="test-btn" target="_blank">测试AI对话页面</a>
+                <a href="http://192.168.110.17:5174" class="test-btn" target="_blank">返回首页</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
