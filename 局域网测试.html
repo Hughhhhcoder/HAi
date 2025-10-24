@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>局域网访问测试</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .test-button { 
+            padding: 12px 24px; 
+            margin: 10px; 
+            background: rgba(255, 255, 255, 0.2);
+            color: white; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.3s;
+        }
+        .test-button:hover { 
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .result { 
+            margin: 10px 0; 
+            padding: 15px; 
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .info { color: #60a5fa; }
+        h1 { text-align: center; margin-bottom: 30px; }
+        h2 { color: #fbbf24; margin-top: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 局域网访问测试</h1>
+        
+        <div class="test-section">
+            <h2>1. 基础连接测试</h2>
+            <button class="test-button" onclick="testBasicConnection()">测试前端连接</button>
+            <button class="test-button" onclick="testBackendConnection()">测试后端连接</button>
+            <div id="basic-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. API功能测试</h2>
+            <button class="test-button" onclick="testAiRoles()">测试AI角色API</button>
+            <button class="test-button" onclick="testUserLogin()">测试用户登录</button>
+            <button class="test-button" onclick="testPsychTests()">测试心理测评</button>
+            <div id="api-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. 网络诊断</h2>
+            <button class="test-button" onclick="checkNetworkInfo()">检查网络信息</button>
+            <button class="test-button" onclick="testCors()">测试CORS配置</button>
+            <div id="network-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. 访问地址</h2>
+            <div class="result">
+                <p><strong>前端地址：</strong> <a href="http://192.168.110.17:5174" target="_blank" style="color: #60a5fa;">http://192.168.110.17:5174</a></p>
+                <p><strong>后端API：</strong> <a href="http://192.168.110.17:8000" target="_blank" style="color: #60a5fa;">http://192.168.110.17:8000</a></p>
+                <p><strong>API文档：</strong> <a href="http://192.168.110.17:8000/docs" target="_blank" style="color: #60a5fa;">http://192.168.110.17:8000/docs</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://192.168.110.17';
+        
+        async function testBasicConnection() {
+            const resultDiv = document.getElementById('basic-result');
+            resultDiv.innerHTML = '<span class="info">正在测试前端连接...</span>';
+            
+            try {
+                const response = await fetch(`${BASE_URL}:5174`);
+                if (response.ok) {
+                    resultDiv.innerHTML = '<span class="success">✅ 前端连接正常</span>';
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ 前端连接失败</span>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 前端连接错误: ${error.message}</span>`;
+            }
+        }
+        
+        async function testBackendConnection() {
+            const resultDiv = document.getElementById('basic-result');
+            resultDiv.innerHTML = '<span class="info">正在测试后端连接...</span>';
+            
+            try {
+                const response = await fetch(`${BASE_URL}:8000/ping`);
+                const data = await response.json();
+                if (data.msg === 'pong') {
+                    resultDiv.innerHTML = '<span class="success">✅ 后端连接正常</span>';
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ 后端响应异常</span>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 后端连接错误: ${error.message}</span>`;
+            }
+        }
+        
+        async function testAiRoles() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<span class="info">正在测试AI角色API...</span>';
+            
+            try {
+                const response = await fetch(`${BASE_URL}:8000/api/ai/roles`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    resultDiv.innerHTML = `<span class="success">✅ AI角色API正常 (${data.length}个角色)</span>`;
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ AI角色API返回空数据</span>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ AI角色API错误: ${error.message}</span>`;
+            }
+        }
+        
+        async function testUserLogin() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<span class="info">正在测试用户登录API...</span>';
+            
+            try {
+                const response = await fetch(`${BASE_URL}:8000/api/user/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: 'admin123' })
+                });
+                const data = await response.json();
+                if (data && data.user_id) {
+                    resultDiv.innerHTML = '<span class="success">✅ 用户登录API正常</span>';
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ 用户登录API失败</span>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 用户登录API错误: ${error.message}</span>`;
+            }
+        }
+        
+        async function testPsychTests() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<span class="info">正在测试心理测评API...</span>';
+            
+            try {
+                const response = await fetch(`${BASE_URL}:8000/api/psych/categories`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    resultDiv.innerHTML = `<span class="success">✅ 心理测评API正常 (${data.length}个分类)</span>`;
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ 心理测评API返回空数据</span>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 心理测评API错误: ${error.message}</span>`;
+            }
+        }
+        
+        async function checkNetworkInfo() {
+            const resultDiv = document.getElementById('network-result');
+            resultDiv.innerHTML = '<span class="info">正在检查网络信息...</span>';
+            
+            try {
+                const info = {
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    platform: navigator.platform,
+                    cookieEnabled: navigator.cookieEnabled,
+                    onLine: navigator.onLine,
+                    currentURL: window.location.href
+                };
+                
+                resultDiv.innerHTML = `
+                    <span class="success">✅ 网络信息检查完成</span><br>
+                    <div style="margin-top: 10px; font-size: 0.9em;">
+                        <strong>用户代理:</strong> ${info.userAgent}<br>
+                        <strong>语言:</strong> ${info.language}<br>
+                        <strong>平台:</strong> ${info.platform}<br>
+                        <strong>Cookie:</strong> ${info.cookieEnabled ? '启用' : '禁用'}<br>
+                        <strong>在线状态:</strong> ${info.onLine ? '在线' : '离线'}<br>
+                        <strong>当前URL:</strong> ${info.currentURL}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 网络信息检查错误: ${error.message}</span>`;
+            }
+        }
+        
+        async function testCors() {
+            const resultDiv = document.getElementById('network-result');
+            resultDiv.innerHTML = '<span class="info">正在测试CORS配置...</span>';
+            
+            try {
+                const response = await fetch(`${BASE_URL}:8000/api/ai/roles`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = '<span class="success">✅ CORS配置正常，跨域请求成功</span>';
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ CORS配置可能有问题</span>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ CORS测试错误: ${error.message}</span>`;
+            }
+        }
+        
+        // 页面加载时自动运行基础测试
+        window.onload = function() {
+            testBasicConnection();
+            testBackendConnection();
+        };
+    </script>
+</body>
+</html>
