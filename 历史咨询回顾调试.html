@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史咨询回顾调试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .debug-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .debug-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 5px;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .debug-info {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .step h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .step p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .code {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🔍</div>
+            <h1>历史咨询回顾调试工具</h1>
+            <p class="subtitle">帮助诊断和解决历史咨询回顾功能问题</p>
+        </div>
+        
+        <div class="debug-section">
+            <h2>🔍 问题诊断</h2>
+            <div class="status info">
+                根据您的反馈，历史咨询回顾显示为0，但数据库中有96条对话记录。让我们逐步排查问题。
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>📊 数据库状态检查</h2>
+            <div class="step">
+                <h3>1. 数据库连接状态</h3>
+                <p>检查数据库是否正常运行，对话记录是否存在。</p>
+                <button class="test-btn" onclick="checkDatabase()">检查数据库</button>
+                <div id="db-result" class="debug-info" style="display: none;"></div>
+            </div>
+            
+            <div class="step">
+                <h3>2. 用户ID检查</h3>
+                <p>检查当前登录用户的ID，确认是否正确获取。</p>
+                <button class="test-btn" onclick="checkUserID()">检查用户ID</button>
+                <div id="user-result" class="debug-info" style="display: none;"></div>
+            </div>
+            
+            <div class="step">
+                <h3>3. API端点测试</h3>
+                <p>测试历史咨询回顾API是否正常工作。</p>
+                <button class="test-btn" onclick="testAPI()">测试API</button>
+                <div id="api-result" class="debug-info" style="display: none;"></div>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>🛠️ 解决方案</h2>
+            <div class="step">
+                <h3>可能的问题原因：</h3>
+                <ul style="color: #666; line-height: 1.8; margin-left: 20px;">
+                    <li><strong>用户ID不匹配：</strong>前端获取的用户ID与数据库中的用户ID不一致</li>
+                    <li><strong>localStorage问题：</strong>用户信息没有正确存储在localStorage中</li>
+                    <li><strong>API调用失败：</strong>前端调用API时出现错误</li>
+                    <li><strong>数据格式问题：</strong>API返回的数据格式与前端期望的不一致</li>
+                </ul>
+            </div>
+            
+            <div class="step">
+                <h3>调试步骤：</h3>
+                <ol style="color: #666; line-height: 1.8; margin-left: 20px;">
+                    <li>打开浏览器开发者工具（F12）</li>
+                    <li>访问AI对话页面</li>
+                    <li>查看Console标签页中的调试信息</li>
+                    <li>点击"历史咨询回顾"按钮</li>
+                    <li>查看Network标签页中的API请求</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>🚀 快速修复</h2>
+            <div class="step">
+                <h3>临时解决方案：</h3>
+                <p>如果问题持续存在，可以尝试以下步骤：</p>
+                <div class="code">
+1. 清除浏览器缓存和localStorage
+2. 重新登录系统
+3. 进行一次新的AI对话
+4. 再次查看历史咨询回顾
+                </div>
+            </div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>📞 技术支持</h2>
+            <div class="status info">
+                如果问题仍然存在，请提供以下信息：<br>
+                • 浏览器控制台的错误信息<br>
+                • 网络请求的响应内容<br>
+                • 当前登录的用户信息
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function checkDatabase() {
+            const resultDiv = document.getElementById('db-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '正在检查数据库...';
+            
+            try {
+                const response = await fetch('/api/ai/roles');
+                const data = await response.json();
+                resultDiv.innerHTML = `✅ 数据库连接正常<br>AI角色数量: ${data.length}`;
+            } catch (error) {
+                resultDiv.innerHTML = `❌ 数据库连接失败: ${error.message}`;
+            }
+        }
+        
+        function checkUserID() {
+            const resultDiv = document.getElementById('user-result');
+            resultDiv.style.display = 'block';
+            
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                resultDiv.innerHTML = '❌ 未找到用户信息，请先登录';
+                return;
+            }
+            
+            try {
+                const user = JSON.parse(userStr);
+                const userId = user.id || user.user_id || 1;
+                resultDiv.innerHTML = `✅ 用户信息获取成功<br>用户ID: ${userId}<br>用户信息: ${JSON.stringify(user, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `❌ 用户信息解析失败: ${error.message}`;
+            }
+        }
+        
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '正在测试API...';
+            
+            try {
+                const userStr = localStorage.getItem('user');
+                if (!userStr) {
+                    resultDiv.innerHTML = '❌ 未找到用户信息，请先登录';
+                    return;
+                }
+                
+                const user = JSON.parse(userStr);
+                const userId = user.id || user.user_id || 1;
+                
+                const response = await fetch(`/api/ai/full-history?user_id=${userId}&role_id=1`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `✅ API调用成功<br>用户ID: ${userId}<br>对话数量: ${data.total_messages}<br>响应数据: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `❌ API调用失败: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

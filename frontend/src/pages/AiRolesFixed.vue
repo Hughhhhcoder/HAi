@@ -482,7 +482,15 @@ export default {
       }
       
       try {
-        const userId = JSON.parse(localStorage.getItem('user')).id
+        const userStr = localStorage.getItem('user')
+        if (!userStr) {
+          console.log('No user found in localStorage')
+          alert('用户未登录，请先登录')
+          return
+        }
+        const user = JSON.parse(userStr)
+        const userId = user.id || user.user_id || 1
+        console.log('Loading consultation review for user:', userId)
         const consultationData = []
         let latestConsultation = null
         let latestTime = null
@@ -548,7 +556,14 @@ export default {
     },
     async loadLastConsultation() {
       try {
-        const userId = JSON.parse(localStorage.getItem('user')).id
+        const userStr = localStorage.getItem('user')
+        if (!userStr) {
+          console.log('No user found in localStorage')
+          return
+        }
+        const user = JSON.parse(userStr)
+        const userId = user.id || user.user_id || 1
+        console.log('Loading last consultation for user:', userId)
         let latestConsultation = null
         let latestTime = null
         
