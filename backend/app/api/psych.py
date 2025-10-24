@@ -101,7 +101,9 @@ def submit_psych_test(payload: PsychSubmit, db: Session = Depends(get_db)):
         "record_id": record.id,
         "score": score,
         "result_details": result_details,
-        "ai_report": ai_report  # 新增：返回 AI 报告
+        "ai_report": ai_report,  # 新增：返回 AI 报告
+        "created_at": record.created_at.isoformat() if record.created_at else None,
+        "updated_at": record.updated_at.isoformat() if record.updated_at else None
     }
 
 
@@ -123,7 +125,9 @@ def get_psych_history(user_id: int, test_type: str = None, db: Session = Depends
             "date": r.date,
             "answers": json.loads(r.answers_json) if r.answers_json else [],
             "result_details": json.loads(r.result_json) if r.result_json else {},
-            "ai_report": r.ai_report  # 新增：返回 AI 报告
+            "ai_report": r.ai_report,  # 新增：返回 AI 报告
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "updated_at": r.updated_at.isoformat() if r.updated_at else None
         }
         result_list.append(item)
     
@@ -175,5 +179,8 @@ def get_user_profile(user_id: int, db: Session = Depends(get_db)):
         "coping_patterns": insight.coping_patterns or "",
         "core_traits": insight.core_traits or "",
         "triggers": insight.triggers or "",
-        "summary": insight.summary or ""
+        "summary": insight.summary or "",
+        "created_at": insight.created_at.isoformat() if insight.created_at else None,
+        "updated_at": insight.updated_at.isoformat() if insight.updated_at else None,
+        "last_profile_update": insight.last_profile_update.isoformat() if insight.last_profile_update else None
     }

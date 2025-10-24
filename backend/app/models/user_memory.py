@@ -28,6 +28,7 @@ class UserMemory(Base):
     # 最后更新时间（用于记忆衰减）
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    last_accessed_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
     # 访问次数（频繁被引用的记忆更重要）
     access_count = Column(Integer, default=0)
@@ -61,5 +62,7 @@ class UserInsight(Base):
     # 综合摘要（AI 生成）
     summary = Column(Text, nullable=True)
     
+    created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    last_profile_update = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

@@ -213,6 +213,16 @@
               <span style="font-size: 0.875rem; color: #6b7280;">建议</span>
               <p style="color: #374151; margin-top: 0.5rem; line-height: 1.6;">{{ testResult.result_details?.suggestion || '暂无建议' }}</p>
             </div>
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <span style="font-size: 0.75rem; color: #9ca3af;">
+                  📅 测评时间：{{ formatTimestamp(testResult.created_at) }}
+                </span>
+                <span v-if="testResult.updated_at" style="font-size: 0.75rem; color: #9ca3af;">
+                  🔄 更新时间：{{ formatTimestamp(testResult.updated_at) }}
+                </span>
+              </div>
+            </div>
           </div>
 
           <!-- AI报告 -->
@@ -565,6 +575,44 @@ const renderMarkdown = (text) => {
   } catch (error) {
     console.error('Markdown渲染错误:', error)
     return text.replace(/\n/g, '<br>')
+  }
+}
+
+const formatTimestamp = (timestamp) => {
+  if (!timestamp) return '未知时间'
+  try {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = now - date
+    
+    // 如果是今天
+    if (diff < 24 * 60 * 60 * 1000 && date.getDate() === now.getDate()) {
+      return date.toLocaleTimeString('zh-CN', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    }
+    
+    // 如果是昨天
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    if (date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth()) {
+      return `昨天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
+    }
+    
+    // 其他情况显示完整日期时间
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch (error) {
+    console.error('时间格式化错误:', error)
+    return '时间格式错误'
   }
 }
 

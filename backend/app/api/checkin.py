@@ -57,8 +57,11 @@ def daily_checkin(
 def checkin_history(user_id: int, db: Session = Depends(get_db)):
     records = db.query(DailyCheckin).filter(DailyCheckin.user_id == user_id).order_by(DailyCheckin.date.desc()).all()
     return [{
+        "id": r.id,
         "date": r.date,
         "mood": r.mood,
         "sleep_hours": r.sleep_hours,
-        "completed_tasks": r.completed_tasks
+        "completed_tasks": r.completed_tasks,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "updated_at": r.updated_at.isoformat() if r.updated_at else None
     } for r in records] 

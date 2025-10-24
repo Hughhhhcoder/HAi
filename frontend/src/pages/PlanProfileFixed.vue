@@ -135,6 +135,11 @@
                 {{ generatedPlan.priority_level }}
               </span>
             </div>
+            <div v-if="generatedPlan.created_at" class="plan-timestamp">
+              <span style="font-size: 0.75rem; color: #9ca3af;">
+                📅 生成时间：{{ formatTimestamp(generatedPlan.created_at) }}
+              </span>
+            </div>
           </div>
           
           <!-- 重点关注领域 -->
@@ -184,6 +189,11 @@
               <div class="item-header">
                 <span class="item-number">计划 #{{ idx + 1 }}</span>
                 <span class="item-stage">{{ plan.stage || '未知阶段' }}</span>
+              </div>
+              <div v-if="plan.created_at" class="item-timestamp">
+                <span style="font-size: 0.75rem; color: #9ca3af;">
+                  📅 {{ formatTimestamp(plan.created_at) }}
+                </span>
               </div>
               <div class="item-content">
                 <pre class="item-text">{{ plan.plan_text }}</pre>
@@ -261,6 +271,44 @@ function formatDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function formatTimestamp(timestamp) {
+  if (!timestamp) return '未知时间'
+  try {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = now - date
+    
+    // 如果是今天
+    if (diff < 24 * 60 * 60 * 1000 && date.getDate() === now.getDate()) {
+      return date.toLocaleTimeString('zh-CN', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    }
+    
+    // 如果是昨天
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    if (date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth()) {
+      return `昨天 ${date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
+    }
+    
+    // 其他情况显示完整日期时间
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch (error) {
+    console.error('时间格式化错误:', error)
+    return '时间格式错误'
+  }
 }
 
 onMounted(async () => {

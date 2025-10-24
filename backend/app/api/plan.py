@@ -112,7 +112,8 @@ def plan_history(user_id: int, db: Session = Depends(get_db)):
         "id": p.id,
         "plan_text": p.plan_text,
         "stage": p.stage,
-        "created_at": p.created_at
+        "created_at": p.created_at.isoformat() if p.created_at else None,
+        "updated_at": p.updated_at.isoformat() if p.updated_at else None
     } for p in plans]
 
 # mock计划生成逻辑
