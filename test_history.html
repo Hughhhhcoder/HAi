@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史记录功能测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .test-button { padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .test-button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>历史记录功能测试</h1>
+    
+    <div class="test-section">
+        <h2>1. 心理测评记录测试</h2>
+        <button class="test-button" onclick="testPsychHistory()">测试心理测评记录</button>
+        <div id="psych-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. AI聊天记录测试</h2>
+        <button class="test-button" onclick="testAiHistory()">测试AI聊天记录</button>
+        <div id="ai-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 每日打卡记录测试</h2>
+        <button class="test-button" onclick="testCheckinHistory()">测试打卡记录</button>
+        <div id="checkin-result" class="result"></div>
+    </div>
+
+    <script>
+        async function testPsychHistory() {
+            const resultDiv = document.getElementById('psych-result');
+            resultDiv.innerHTML = '正在测试心理测评记录...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/psych/history?user_id=1');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>心理测评记录 (${data.length} 条)</h3>
+                    <p>最新记录: ${data[0]?.test_type || '无'} - 分数: ${data[0]?.score || '无'}</p>
+                    <p>时间: ${data[0]?.created_at || '无'}</p>
+                    <details>
+                        <summary>查看所有记录</summary>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </details>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `错误: ${error.message}`;
+            }
+        }
+        
+        async function testAiHistory() {
+            const resultDiv = document.getElementById('ai-result');
+            resultDiv.innerHTML = '正在测试AI聊天记录...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/ai/full-history?user_id=1&role_id=1');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>AI聊天记录 (${data.total_messages} 条)</h3>
+                    <p>最新消息: ${data.conversations[0]?.message?.substring(0, 50) || '无'}...</p>
+                    <p>时间: ${data.conversations[0]?.timestamp || '无'}</p>
+                    <details>
+                        <summary>查看所有记录</summary>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </details>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `错误: ${error.message}`;
+            }
+        }
+        
+        async function testCheckinHistory() {
+            const resultDiv = document.getElementById('checkin-result');
+            resultDiv.innerHTML = '正在测试打卡记录...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/checkin/history?user_id=1');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>打卡记录 (${data.length} 条)</h3>
+                    <p>最新记录: ${data[0]?.mood || '无'} - 睡眠: ${data[0]?.sleep_hours || '无'}小时</p>
+                    <p>时间: ${data[0]?.created_at || '无'}</p>
+                    <details>
+                        <summary>查看所有记录</summary>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </details>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `错误: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

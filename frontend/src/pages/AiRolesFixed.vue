@@ -61,6 +61,12 @@
             </div>
           </div>
           <div class="chat-actions">
+            <button @click="showConsultationReview" class="consultation-review-btn">
+              <svg class="review-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              历史咨询回顾
+            </button>
             <button @click="showHistory" class="history-btn">
               <svg class="history-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -135,6 +141,70 @@
       </div>
     </div>
 
+    <!-- 历史咨询回顾弹窗 -->
+    <div v-if="showConsultationModal" class="consultation-modal" @click="closeConsultationModal">
+      <div class="consultation-modal-content" @click.stop>
+        <div class="consultation-header">
+          <h3 class="consultation-title">📋 历史咨询回顾</h3>
+          <button @click="closeConsultationModal" class="close-btn">
+            <svg class="close-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="consultation-stats">
+          <div class="stat-item">
+            <span class="stat-label">咨询师数量</span>
+            <span class="stat-value">{{ consultationStats.totalConsultants }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">总咨询次数</span>
+            <span class="stat-value">{{ consultationStats.totalConsultations }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">最近咨询</span>
+            <span class="stat-value">{{ consultationStats.lastConsultationTime }}</span>
+          </div>
+        </div>
+
+        <div class="consultation-list">
+          <div 
+            v-for="(consultation, index) in consultationReviews" 
+            :key="index"
+            class="consultation-item"
+          >
+            <div class="consultation-item-header">
+              <div class="consultation-role">
+                <div class="role-avatar" :style="{ background: consultation.role.gradient }">
+                  <span class="role-emoji">{{ consultation.role.emoji }}</span>
+                </div>
+                <div class="role-info">
+                  <h4 class="role-name">{{ consultation.role.name }}</h4>
+                  <p class="role-description">{{ consultation.role.description }}</p>
+                </div>
+              </div>
+              <span class="consultation-time">{{ formatTimestamp(consultation.lastMessageTime) }}</span>
+            </div>
+            <div class="consultation-summary">
+              <h5 class="summary-title">咨询摘要：</h5>
+              <p class="summary-content">{{ consultation.summary }}</p>
+            </div>
+            <div class="consultation-details">
+              <div class="detail-item">
+                <span class="detail-label">对话次数：</span>
+                <span class="detail-value">{{ consultation.messageCount }} 次</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">主要话题：</span>
+                <span class="detail-value">{{ consultation.topics.join('、') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 历史记录弹窗 -->
     <div v-if="showHistoryModal" class="history-modal" @click="closeHistoryModal">
       <div class="history-modal-content" @click.stop>
@@ -195,6 +265,13 @@ export default {
       historyStats: {
         totalMessages: 0,
         lastMessageTime: '暂无'
+      },
+      showConsultationModal: false,
+      consultationReviews: [],
+      consultationStats: {
+        totalConsultants: 0,
+        totalConsultations: 0,
+        lastConsultationTime: '暂无'
       }
     }
   },
@@ -375,6 +452,108 @@ export default {
     },
     closeHistoryModal() {
       this.showHistoryModal = false
+    },
+    async showConsultationReview() {
+      if (!this.aiRoles.length) {
+        await this.fetchRoles()
+      }
+      
+      try {
+        const userId = JSON.parse(localStorage.getItem('user')).id
+        const consultationData = []
+        
+        // 获取所有AI角色的对话历史
+        for (const role of this.aiRoles) {
+          try {
+            const response = await fetch(`http://localhost:8000/api/ai/full-history?user_id=${userId}&role_id=${role.id}`)
+            if (response.ok) {
+              const data = await response.json()
+              if (data.conversations && data.conversations.length > 0) {
+                // 分析对话内容，生成摘要
+                const summary = this.generateConsultationSummary(data.conversations)
+                const topics = this.extractTopics(data.conversations)
+                
+                consultationData.push({
+                  role: role,
+                  messageCount: data.conversations.length,
+                  lastMessageTime: data.conversations[0].timestamp,
+                  summary: summary,
+                  topics: topics
+                })
+              }
+            }
+          } catch (error) {
+            console.error(`获取角色 ${role.name} 的历史记录失败:`, error)
+          }
+        }
+        
+        // 按最后对话时间排序
+        consultationData.sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime))
+        
+        this.consultationReviews = consultationData
+        this.consultationStats = {
+          totalConsultants: consultationData.length,
+          totalConsultations: consultationData.reduce((sum, item) => sum + item.messageCount, 0),
+          lastConsultationTime: consultationData.length > 0 ? 
+            this.formatTimestamp(consultationData[0].lastMessageTime) : '暂无'
+        }
+        this.showConsultationModal = true
+      } catch (error) {
+        console.error('Error loading consultation review:', error)
+        alert('加载历史咨询回顾失败')
+      }
+    },
+    closeConsultationModal() {
+      this.showConsultationModal = false
+    },
+    generateConsultationSummary(conversations) {
+      if (conversations.length === 0) return '暂无对话记录'
+      
+      // 分析对话内容，生成摘要
+      const userMessages = conversations.filter(c => c.is_user).map(c => c.message)
+      const aiMessages = conversations.filter(c => !c.is_user).map(c => c.message)
+      
+      // 简单的摘要生成逻辑
+      let summary = ''
+      if (userMessages.length > 0) {
+        const firstUserMessage = userMessages[userMessages.length - 1] // 最新的用户消息
+        const lastUserMessage = userMessages[0] // 最旧的用户消息
+        
+        if (firstUserMessage.length > 50) {
+          summary = `您主要咨询了关于"${firstUserMessage.substring(0, 50)}..."的问题`
+        } else {
+          summary = `您咨询了关于"${firstUserMessage}"的问题`
+        }
+        
+        if (userMessages.length > 1) {
+          summary += `，共进行了${userMessages.length}轮对话`
+        }
+      }
+      
+      return summary || '咨询内容摘要生成中...'
+    },
+    extractTopics(conversations) {
+      // 简单的关键词提取
+      const topics = []
+      const userMessages = conversations.filter(c => c.is_user).map(c => c.message)
+      
+      // 常见心理话题关键词
+      const topicKeywords = {
+        '情绪管理': ['情绪', '心情', '焦虑', '抑郁', '压力', '愤怒', '悲伤'],
+        '人际关系': ['朋友', '家人', '同事', '恋爱', '分手', '社交', '沟通'],
+        '工作学习': ['工作', '学习', '考试', '职业', '未来', '目标', '计划'],
+        '自我成长': ['自信', '自我', '成长', '改变', '习惯', '性格', '价值观'],
+        '生活困扰': ['睡眠', '饮食', '健康', '时间', '金钱', '选择', '决定']
+      }
+      
+      const allText = userMessages.join(' ')
+      for (const [topic, keywords] of Object.entries(topicKeywords)) {
+        if (keywords.some(keyword => allText.includes(keyword))) {
+          topics.push(topic)
+        }
+      }
+      
+      return topics.length > 0 ? topics : ['一般咨询']
     },
     formatTime(date) {
       const hours = date.getHours().toString().padStart(2, '0')
@@ -1103,6 +1282,30 @@ export default {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.consultation-review-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.consultation-review-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.review-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .history-btn {
@@ -1145,5 +1348,165 @@ export default {
   width: 1.25rem;
   height: 1.25rem;
   color: white;
+}
+
+/* 历史咨询回顾弹窗样式 */
+.consultation-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.consultation-modal-content {
+  background: white;
+  border-radius: 1rem;
+  width: 90%;
+  max-width: 900px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.consultation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  color: white;
+}
+
+.consultation-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.consultation-stats {
+  display: flex;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.consultation-list {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.consultation-item {
+  padding: 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.2s;
+}
+
+.consultation-item:hover {
+  background: #f8fafc;
+}
+
+.consultation-item:last-child {
+  border-bottom: none;
+}
+
+.consultation-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.consultation-role {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.role-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.role-emoji {
+  color: white;
+}
+
+.role-info {
+  flex: 1;
+}
+
+.role-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.role-description {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.consultation-time {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.consultation-summary {
+  margin-bottom: 1rem;
+}
+
+.summary-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.5rem 0;
+}
+
+.summary-content {
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.consultation-details {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.detail-value {
+  font-size: 0.75rem;
+  color: #374151;
+  font-weight: 500;
 }
 </style>
